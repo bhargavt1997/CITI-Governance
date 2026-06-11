@@ -346,8 +346,8 @@ select:focus, input:focus, textarea:focus {
 .jstep.current .jlabel { color: var(--ink); font-weight: 700; }
 .jstep.failed .jdot { background: var(--red); color: #fff; box-shadow: 0 0 0 4px var(--red-bg); }
 .jstep.failed .jlabel { color: var(--red); font-weight: 700; }
-/* KARAT failed: the connector to the next step is broken (red), with an X on it */
-.jstep.break::after { background: var(--red); }
+/* KARAT failed: red line runs up to the X (mid-gap); nothing continues past it. */
+.jstep.break::after { background: var(--red); width: calc(50% - 15px); }
 .jbreak {
   position: absolute; top: 5px; left: 100%; transform: translateX(-50%);
   width: 20px; height: 20px; border-radius: 50%; background: var(--red); color: #fff;
