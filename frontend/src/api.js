@@ -14,7 +14,7 @@ async function request(path, options = {}) {
 
   if (res.status === 401 && !path.startsWith('/auth/login')) {
     onAuthFailure?.()
-    throw new Error('Session expired — please sign in again')
+    throw new Error('Session expired - please sign in again')
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
@@ -80,6 +80,7 @@ export const bandLabel = (b) => (b ? String(b).toUpperCase() : '')
 export const STAGES = [
   'NOMINATED',
   'CARAT_INTERVIEW',
+  'KARAT_FAILED',
   'CLIENT_INTERVIEW',
   'FINAL_SELECTION',
   'ONBOARDING_INITIATED',
@@ -88,9 +89,13 @@ export const STAGES = [
   'ONBOARDED',
 ]
 
+// SOEID is only relevant once onboarding has started - hide it (value or "pending") before that stage.
+export const soeidVisible = (stage) => STAGES.indexOf(stage) >= STAGES.indexOf('ONBOARDING_INITIATED')
+
 export const STAGE_LABELS = {
   NOMINATED: 'Nominated',
-  CARAT_INTERVIEW: 'KARAT Interview',
+  CARAT_INTERVIEW: 'KARAT Scheduled',
+  KARAT_FAILED: 'KARAT Failed',
   CLIENT_INTERVIEW: 'Client Interview',
   FINAL_SELECTION: 'Final Selection',
   ONBOARDING_INITIATED: 'Onboarding Initiated',

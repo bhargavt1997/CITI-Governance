@@ -40,7 +40,7 @@ function AddTrainingModal({ onClose, onCreated }) {
 }
 
 export default function Training() {
-  const { isManager } = useAuth()
+  const { isSeniorManager } = useAuth()
   const [items, setItems] = useState([])
   const [showAdd, setShowAdd] = useState(false)
   const [error, setError] = useState(null)
@@ -61,7 +61,7 @@ export default function Training() {
       <div className="toolbar">
         <span className="badge blue">{items.length} certifications</span>
         <div className="spacer" />
-        {isManager && (
+        {isSeniorManager && (
           <button className="btn" onClick={() => setShowAdd(true)}>+ Add Certification</button>
         )}
       </div>
@@ -73,7 +73,7 @@ export default function Training() {
             <h4>{t.title}</h4>
             <p>{t.description}</p>
             <div className="training-meta">
-              <span>📚 {t.provider || '—'}</span>
+              <span>📚 {t.provider || '-'}</span>
               <span>👥 {enrolledCount} enrolled</span>
             </div>
             {t.targetDate && <div className="training-meta" style={{ marginTop: 6 }}><span>🎯 Target: {t.targetDate}</span></div>}

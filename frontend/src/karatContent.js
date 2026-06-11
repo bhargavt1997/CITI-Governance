@@ -1,4 +1,4 @@
-// KARAT Assessment prep — role-specific study guides and practice questions.
+// KARAT Assessment prep - role-specific study guides and practice questions.
 // Content (not certifications): a guide of key topics plus role-specific Q&A.
 
 export const KARAT_TRACKS = [
@@ -10,7 +10,7 @@ export const KARAT_TRACKS = [
       { topic: 'CI/CD Pipelines', detail: 'Automate build → test → deploy with gating and rollback. Know stages, artifacts and environments (Jenkins, GitLab CI, GitHub Actions).' },
       { topic: 'Containers (Docker)', detail: 'Images vs containers, Dockerfile layers, multi-stage builds, registries, and keeping images small and secure.' },
       { topic: 'Kubernetes', detail: 'Pods, Deployments, Services, ConfigMaps/Secrets, rolling updates, liveness/readiness probes and namespaces.' },
-      { topic: 'Infrastructure as Code', detail: 'Terraform (declarative, state, plan/apply, modules) and Ansible for configuration — idempotent, version-controlled infra.' },
+      { topic: 'Infrastructure as Code', detail: 'Terraform (declarative, state, plan/apply, modules) and Ansible for configuration - idempotent, version-controlled infra.' },
       { topic: 'Observability', detail: 'Metrics (Prometheus), dashboards (Grafana), centralized logs (ELK) and tracing. Watch the four golden signals.' },
       { topic: 'Cloud (AWS)', detail: 'EC2, S3, IAM roles/policies, VPC/subnets/security groups, load balancers and autoscaling.' },
       { topic: 'Linux & Networking', detail: 'Permissions, processes, systemd, shell scripting; DNS, TCP/IP, ports, TLS and firewalls.' },
@@ -19,7 +19,7 @@ export const KARAT_TRACKS = [
     questions: [
       { q: 'What is the difference between a Docker image and a container?', a: 'An image is an immutable, layered template; a container is a running instance of that image with its own writable layer and isolated process namespace.' },
       { q: 'How does a Kubernetes rolling update achieve zero downtime?', a: 'It replaces old pods with new ones incrementally, respecting readiness probes and maxUnavailable/maxSurge, so traffic only routes to healthy pods.' },
-      { q: 'What problem does Infrastructure as Code solve?', a: 'Reproducible, auditable, version-controlled infrastructure — it eliminates config drift and error-prone manual setup.' },
+      { q: 'What problem does Infrastructure as Code solve?', a: 'Reproducible, auditable, version-controlled infrastructure - it eliminates config drift and error-prone manual setup.' },
       { q: 'Liveness probe vs readiness probe?', a: 'Liveness restarts a hung container; readiness controls whether a pod is allowed to receive traffic.' },
       { q: 'Blue-green vs canary deployment?', a: 'Blue-green swaps all traffic between two identical environments at once; canary routes a small percentage to the new version first, then ramps up.' },
       { q: 'Why use multi-stage Docker builds?', a: 'Build tools and dependencies stay in an early stage; the final image copies only the artifact, producing a smaller, more secure image.' },
@@ -43,7 +43,7 @@ export const KARAT_TRACKS = [
       { q: 'What is the equals()/hashCode() contract?', a: 'Equal objects must return equal hashCodes. HashMap/HashSet rely on it; breaking it causes lost or duplicated entries.' },
       { q: 'ArrayList vs LinkedList?', a: 'ArrayList gives O(1) random access but costly mid-list inserts; LinkedList gives O(1) inserts/removes at the ends but O(n) access.' },
       { q: 'volatile vs synchronized?', a: 'volatile guarantees visibility of a variable across threads; synchronized provides both visibility and mutual exclusion (atomicity).' },
-      { q: 'What is dependency injection in Spring?', a: 'The container creates and wires beans so a class declares its dependencies instead of constructing them — improving decoupling and testability.' },
+      { q: 'What is dependency injection in Spring?', a: 'The container creates and wires beans so a class declares its dependencies instead of constructing them - improving decoupling and testability.' },
       { q: 'Lazy vs eager loading in JPA?', a: 'Lazy fetches an association on first access; eager fetches it immediately. Lazy avoids over-fetching but can throw LazyInitializationException outside a transaction.' },
       { q: 'What causes the N+1 query problem and how do you fix it?', a: 'Loading a list then firing one query per element’s association. Fix with JOIN FETCH, entity graphs, or batch fetching.' },
     ],
@@ -87,10 +87,10 @@ export const KARAT_TRACKS = [
     ],
     questions: [
       { q: 'What is overfitting and how do you reduce it?', a: 'The model memorizes training data and generalizes poorly. Reduce it with more data, regularization, simpler models, cross-validation or dropout.' },
-      { q: 'When is accuracy a poor metric?', a: 'On imbalanced datasets — always predicting the majority class scores high. Use precision, recall, F1 or AUC instead.' },
+      { q: 'When is accuracy a poor metric?', a: 'On imbalanced datasets - always predicting the majority class scores high. Use precision, recall, F1 or AUC instead.' },
       { q: 'Precision vs recall?', a: 'Precision: of predicted positives, how many are correct. Recall: of actual positives, how many were found.' },
       { q: 'What is RAG?', a: 'Retrieval-Augmented Generation: relevant documents are retrieved and given to an LLM as context so its answers are grounded and current.' },
-      { q: 'Why split data into train/validation/test?', a: 'Train fits parameters, validation tunes hyperparameters and model choice, test gives an unbiased final estimate — preventing leakage and over-optimistic results.' },
+      { q: 'Why split data into train/validation/test?', a: 'Train fits parameters, validation tunes hyperparameters and model choice, test gives an unbiased final estimate - preventing leakage and over-optimistic results.' },
       { q: 'What is an embedding?', a: 'A dense vector representation of text or data that captures semantic meaning, enabling similarity search and ML over unstructured inputs.' },
     ],
   },

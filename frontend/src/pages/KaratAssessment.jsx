@@ -9,7 +9,7 @@ export default function KaratAssessment() {
     <div>
       <h1 className="page-title">KARAT Assessment Prep</h1>
       <p className="page-sub">
-        Role-based preparation for the KARAT assessment — the concepts that matter and practice questions for each track.
+        Role-based preparation for the KARAT assessment - the concepts that matter and practice questions for each track.
       </p>
 
       <div className="tabs">
@@ -24,7 +24,16 @@ export default function KaratAssessment() {
         ))}
       </div>
 
-      <p className="page-sub" style={{ marginTop: 4 }}>{track.blurb}</p>
+      <div className="karat-trackbar">
+        <p className="page-sub" style={{ margin: 0 }}>{track.blurb}</p>
+        <a
+          className="btn secondary"
+          href={`${import.meta.env.BASE_URL}karat/${track.id}-karat-questions.txt`}
+          download={`${track.label.replace(/[^A-Za-z0-9]+/g, '-')}-KARAT-questions.txt`}
+        >
+          ↓ Download question bank
+        </a>
+      </div>
 
       <h3 className="section-title">Study Guide</h3>
       <div className="karat-guide">

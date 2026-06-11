@@ -24,7 +24,7 @@ public class DataSeeder {
                            EnrollmentRepository enrollments, AppUserRepository users,
                            AuthService auth, JdbcTemplate jdbc) {
         return args -> {
-            // The LEAD role was renamed to MANAGER — migrate any pre-existing rows before they are mapped.
+            // The LEAD role was renamed to MANAGER - migrate any pre-existing rows before they are mapped.
             migrateLeadRole(jdbc);
             // Move legacy A/B/C/D bands onto the new band scheme (b4l..b8); b6h+ are manager-only.
             migrateBands(jdbc);
@@ -36,7 +36,27 @@ public class DataSeeder {
             ensureDeveloperAccounts(users, candidates, auth);
             // Managers fill their own PTS, so each manager needs a linked candidate record.
             ensureManagerProfiles(users, candidates);
+            // Demo org mappings (run after manager candidate records exist).
+            applyDemoOrg(jdbc);
         };
+    }
+
+    /** Demo-specific org structure: Jitendr Kumar is a B5H senior manager; Bhargav T reports to him. Idempotent. */
+    private void applyDemoOrg(JdbcTemplate jdbc) {
+        jdbc.update("UPDATE candidates SET band = 'b5h' "
+                + "WHERE email = 'jitendrkumar@deloitte.com' AND (band IS NULL OR band <> 'b5h')");
+        jdbc.update("UPDATE candidates SET reporting_manager = 'Jitendr Kumar' "
+                + "WHERE email = 'tsbhargav@deloitte.com'");
+        // Demo: one candidate sits in the KARAT Failed stage.
+        jdbc.update("UPDATE candidates SET current_stage = 'KARAT_FAILED' "
+                + "WHERE email = 'rohan.joshi@deloitte.com'");
+        // SOEID only exists once onboarding has started - clear it for anyone in an earlier stage.
+        jdbc.update("UPDATE candidates SET soeid = NULL WHERE soeid IS NOT NULL AND current_stage IN "
+                + "('NOMINATED','CARAT_INTERVIEW','KARAT_FAILED','CLIENT_INTERVIEW','FINAL_SELECTION')");
+        // Bhargav's SOEID, and every onboarded person must have one - backfill any that are missing.
+        jdbc.update("UPDATE candidates SET soeid = 'TB22987' WHERE email = 'tsbhargav@deloitte.com' AND (soeid IS NULL OR soeid = '')");
+        jdbc.update("UPDATE candidates SET soeid = 'SO' || lpad(id::text, 5, '0') "
+                + "WHERE current_stage = 'ONBOARDED' AND (soeid IS NULL OR soeid = '')");
     }
 
     private static final String DEFAULT_PASSWORD = "Citi@123";
@@ -47,6 +67,7 @@ public class DataSeeder {
             {"Suresh Iyer", "suresh.iyer@deloitte.com"},
             {"Anita Desai", "anita.desai@deloitte.com"},
             {"Bhargav T", "tsbhargav@deloitte.com"},
+            {"Jitendr Kumar", "jitendrkumar@deloitte.com"},
     };
 
     /**
@@ -58,13 +79,19 @@ public class DataSeeder {
     private void migrateLeadRole(JdbcTemplate jdbc) {
         jdbc.execute("ALTER TABLE app_users DROP CONSTRAINT IF EXISTS app_users_role_check");
         jdbc.execute("ALTER TABLE candidates DROP CONSTRAINT IF EXISTS candidates_role_check");
+        // Enum CHECK constraints don't get updated by ddl-auto=update; drop the stale stage checks so the
+        // new KARAT_FAILED stage can be written (Hibernate re-creates them with current values on boot).
+        jdbc.execute("ALTER TABLE candidates DROP CONSTRAINT IF EXISTS candidates_current_stage_check");
+        jdbc.execute("ALTER TABLE stage_history DROP CONSTRAINT IF EXISTS stage_history_stage_check");
+        // The old karat_failed flag was replaced by the KARAT_FAILED stage.
+        jdbc.execute("ALTER TABLE candidates DROP COLUMN IF EXISTS karat_failed");
         jdbc.update("UPDATE app_users SET role = 'MANAGER' WHERE role = 'LEAD'");
         jdbc.update("UPDATE candidates SET role = 'MANAGER' WHERE role = 'LEAD'");
     }
 
     /**
      * Map legacy A/B/C/D bands onto the new scheme (b4l..b8) and keep managers on a manager band.
-     * Idempotent — once migrated, values are already b*, so the CASE leaves them untouched.
+     * Idempotent - once migrated, values are already b*, so the CASE leaves them untouched.
      */
     private void migrateBands(JdbcTemplate jdbc) {
         // Managers must hold a manager-eligible band (b6h, b5l, b5h, b4l, b4h).
@@ -110,7 +137,7 @@ public class DataSeeder {
     /**
      * Give every manager account a candidate record (so they can fill their own PTS) and cross-link
      * reporting lines between managers, so each manager's own timesheet is approved by a peer.
-     * Idempotent — safe to run on every boot.
+     * Idempotent - safe to run on every boot.
      */
     private void ensureManagerProfiles(AppUserRepository users, CandidateRepository candidates) {
         List<AppUser> managers = users.findAll().stream()
@@ -126,7 +153,7 @@ public class DataSeeder {
             c.setRole(Role.MANAGER);
             c.setCurrentStage(OnboardingStage.ONBOARDED);
             if (c.getBand() == null) c.setBand(DEFAULT_MANAGER_BAND);
-            if (c.getWave() == null) c.setWave("—");
+            if (c.getWave() == null) c.setWave("-");
             if (c.getPod() == null) c.setPod("Leadership");
             if (c.getLocation() == null) c.setLocation("Hyderabad");
             if (c.getEmployeeId() == null) c.setEmployeeId("MGR" + (1010 + idx));
@@ -164,10 +191,10 @@ public class DataSeeder {
                 {"Rahul Verma",    "rahul.verma@deloitte.com",    "RV77345", "b8",  "Wave 1", "Cards",      "Pune",      "Anita Desai",  "ONBOARDED",               "4"},
                 {"Sneha Reddy",    "sneha.reddy@deloitte.com",    "SR66120", "b7",  "Wave 2", "Cards",      "Hyderabad", "Bhargav T",    "VDI_SETUP_IN_PROGRESS",   "3"},
                 {"Vikram Nair",    "vikram.nair@deloitte.com",    "VN55980", "b6l", "Wave 2", "Risk",       "Chennai",   "Suresh Iyer",  "CITI_CLEARANCE_RECEIVED", "3"},
-                {"Divya Krishnan", "divya.krishnan@deloitte.com", "DK44871", "b7",  "Wave 2", "Risk",       "Bengaluru", "Anita Desai",  "ONBOARDING_INITIATED",    "2"},
+                {"Divya Krishnan", "divya.krishnan@deloitte.com", "",        "b7",  "Wave 2", "Risk",       "Bengaluru", "Anita Desai",  "ONBOARDING_INITIATED",    "2"},
                 {"Karthik Rao",    "karthik.rao@deloitte.com",    "",        "b6l", "Wave 3", "Payments",   "Hyderabad", "Suresh Iyer",  "FINAL_SELECTION",         "2"},
                 {"Ananya Gupta",   "ananya.gupta@deloitte.com",   "",        "b6l", "Wave 3", "Cards",      "Mumbai",    "Anita Desai",  "CLIENT_INTERVIEW",        "1"},
-                {"Rohan Joshi",    "rohan.joshi@deloitte.com",    "",        "b7",  "Wave 3", "Risk",       "Pune",      "Bhargav T",    "CARAT_INTERVIEW",         "1"},
+                {"Rohan Joshi",    "rohan.joshi@deloitte.com",    "",        "b7",  "Wave 3", "Risk",       "Pune",      "Bhargav T",    "KARAT_FAILED",            "1"},
                 {"Meera Pillai",   "meera.pillai@deloitte.com",   "",        "b6l", "Wave 3", "Payments",   "Chennai",   "Bhargav T",    "NOMINATED",               "0"},
             };
 
@@ -208,7 +235,7 @@ public class DataSeeder {
                 c.setSkillGaps(stage == OnboardingStage.ONBOARDED
                         ? "Advanced Kafka, Citi internal frameworks"
                         : "Citi domain knowledge, client communication");
-                c.setAllocations(stage == OnboardingStage.ONBOARDED ? p[5] + " pod — sprint team" : "Not yet allocated");
+                c.setAllocations(stage == OnboardingStage.ONBOARDED ? p[5] + " pod - sprint team" : "Not yet allocated");
                 c.setActivities(stage == OnboardingStage.ONBOARDED ? "Sprint delivery, daily standups" : "Onboarding prep");
                 c.setCreatedAt(now.minusMonths(monthsAgo));
                 saved[i] = candidates.save(c);
@@ -244,10 +271,11 @@ public class DataSeeder {
 
             // Trainings / certifications
             String[][] certs = {
-                {"AWS Certified Developer – Associate", "AWS", "Cloud", "Core AWS services, serverless, CI/CD for the Citi cloud migration workstream."},
+                {"AWS Certified Developer - Associate", "AWS", "Cloud", "Core AWS services, serverless, CI/CD for the Citi cloud migration workstream."},
                 {"Java 21 & Spring Boot 3 Mastery", "Udemy", "Technical", "Modern Java, Spring Boot 3, JPA, and REST API design aligned to Citi standards."},
-                {"Citi Domain — Payments Fundamentals", "Internal", "Domain", "ISO 20022, payment rails, settlement and clearing concepts used in the Payments pod."},
+                {"Citi Domain - Payments Fundamentals", "Internal", "Domain", "ISO 20022, payment rails, settlement and clearing concepts used in the Payments pod."},
                 {"React 19 Advanced Patterns", "Frontend Masters", "Technical", "Hooks, suspense, server components and performance for the governance UI stack."},
+                {"CCAF - Claude Certified Architect Foundations", "Anthropic", "Technical", "Foundations of architecting applications with Claude - prompt design, tool use, agents, RAG, evaluation and safe, production-grade LLM integration."},
             };
             Training[] savedTrainings = new Training[certs.length];
             for (int i = 0; i < certs.length; i++) {
@@ -274,7 +302,7 @@ public class DataSeeder {
                 en.setProgressPct(e[2]);
                 en.setStatus(EnrollmentStatus.values()[e[3]]);
                 en.setNotes(e[3] == 2 ? "Certification completed and verified."
-                        : e[3] == 1 ? "On track — weekly study plan in progress."
+                        : e[3] == 1 ? "On track - weekly study plan in progress."
                         : "Enrolled, yet to start.");
                 enrollments.save(en);
             }

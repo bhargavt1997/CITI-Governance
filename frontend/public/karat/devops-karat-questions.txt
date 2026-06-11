@@ -1,0 +1,34 @@
+KARAT ASSESSMENT - DEVOPS - QUESTION BANK
+Previously asked questions, grouped by difficulty.
+=================================================================
+
+SECTION A - WARM-UP (DOABLE) - start here
+-----------------------------------------------------------------
+A1. What command lists all running Docker containers?
+A2. What is the purpose of a Dockerfile?
+A3. What does `kubectl get pods` show you?
+A4. Which file tells Git which files to leave out of version control?
+A5. What is the difference between `git pull` and `git fetch`?
+
+SECTION B - CORE (MEDIUM TO HIGH) - 20 questions
+-----------------------------------------------------------------
+1.  Explain the difference between a container and a virtual machine, and when you would choose each.
+2.  Walk through, step by step, what happens when you run `kubectl apply -f deployment.yaml`.
+3.  How would you design a zero-downtime deployment for a stateful service?
+4.  Describe how a Kubernetes Service routes traffic to Pods, and how that differs from an Ingress.
+5.  What is the difference between a Docker ENTRYPOINT and CMD, and how do they interact?
+6.  How do you keep secrets out of container images and out of source control in a CI/CD pipeline?
+7.  Explain Terraform state: why it exists, the risks of a shared state file, and how to manage it safely.
+8.  A pod is stuck in CrashLoopBackOff. How do you diagnose the root cause?
+9.  Compare blue-green, canary, and rolling deployments, with the trade-offs of each.
+10. How would you set up monitoring and alerting for a new microservice? Which signals matter most?
+11. Explain horizontal vs vertical autoscaling, and how the Kubernetes HPA decides to scale.
+12. What is a multi-stage Docker build, and which problems does it solve?
+13. How do liveness, readiness, and startup probes differ, and what breaks if you misconfigure them?
+14. Describe how you would stand up a brand-new environment entirely through infrastructure as code.
+15. What strategies reduce a Docker image's size and attack surface?
+16. How does a typical CI pipeline gate a merge to the main branch? Which stages would you include?
+17. Explain how DNS resolution and a load balancer work together to route a user request to your service.
+18. How would you implement centralized logging across many services and make it searchable?
+19. What is the principle of least privilege in IAM, and how do you apply it to a deployment role?
+20. A release passes CI but fails only in production. How do you investigate environment drift?

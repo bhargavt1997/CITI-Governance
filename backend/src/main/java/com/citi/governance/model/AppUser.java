@@ -28,7 +28,7 @@ public class AppUser {
     /** Linked candidate record (null for pure lead accounts without a candidate profile). */
     private Long candidateId;
 
-    /** Not persisted — populated from the linked candidate when returning the user to the client. */
+    /** Not persisted - populated from the linked candidate when returning the user to the client. */
     @Transient
     private String band;
 

@@ -2,7 +2,8 @@ package com.citi.governance.model;
 
 public enum OnboardingStage {
     NOMINATED("Nominated"),
-    CARAT_INTERVIEW("KARAT Interview"),
+    CARAT_INTERVIEW("KARAT Scheduled"),
+    KARAT_FAILED("KARAT Failed"),
     CLIENT_INTERVIEW("Client Interview"),
     FINAL_SELECTION("Final Selection"),
     ONBOARDING_INITIATED("Onboarding Initiated"),

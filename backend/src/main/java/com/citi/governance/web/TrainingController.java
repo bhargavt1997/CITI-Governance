@@ -54,7 +54,7 @@ public class TrainingController {
     @PostMapping("/trainings")
     @ResponseStatus(HttpStatus.CREATED)
     public Training create(@RequestBody Training t, HttpServletRequest req) {
-        AppUser manager = auth.requireManager(req);
+        AppUser manager = auth.requireSeniorManager(req);
         t.setId(null);
         t.setCreatedBy(manager.getName());
         return trainings.save(t);

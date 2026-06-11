@@ -1,0 +1,34 @@
+KARAT ASSESSMENT - AI / PYTHON - QUESTION BANK
+Previously asked questions, grouped by difficulty.
+=================================================================
+
+SECTION A - WARM-UP (DOABLE) - start here
+-----------------------------------------------------------------
+A1. How do you create a virtual environment in Python?
+A2. What is the difference between a list and a tuple?
+A3. What does a train/test split do, and why?
+A4. Which library is commonly used for DataFrames in Python?
+A5. What is the difference between a feature and a label in supervised learning?
+
+SECTION B - CORE (MEDIUM TO HIGH) - 20 questions
+-----------------------------------------------------------------
+1.  Explain the bias-variance trade-off with an example of each failure mode.
+2.  When is accuracy a misleading metric? What would you use instead, and why?
+3.  Explain precision, recall, F1, and ROC-AUC, and when each matters.
+4.  How do you detect and prevent data leakage in a machine learning pipeline?
+5.  Explain the difference between supervised, unsupervised, and reinforcement learning.
+6.  What is overfitting, how do you detect it, and how do you reduce it?
+7.  Explain gradient descent and the role of the learning rate.
+8.  How does a decision tree decide its splits, and how do random forests reduce variance?
+9.  What are embeddings, and how are they used for similarity search?
+10. Explain at a high level how a transformer / LLM generates text (tokens, attention).
+11. What is retrieval-augmented generation (RAG), and what problem does it solve?
+12. How would you evaluate an LLM's output for a summarization task?
+13. Explain cross-validation and why a single train/test split can mislead.
+14. What is the difference between L1 and L2 regularization?
+15. How do you handle an imbalanced dataset?
+16. Compare Python list, tuple, set, and dict, and when to use each.
+17. What are Python generators, and when are they preferable to building a list?
+18. How does vectorization in NumPy improve performance over plain Python loops?
+19. How would you productionize a model: serving, monitoring for drift, and retraining?
+20. What are hallucinations in LLMs, and which techniques reduce them?

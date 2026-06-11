@@ -42,20 +42,17 @@ public class DashboardController {
     @GetMapping("/summary")
     public Map<String, Object> summary(HttpServletRequest request) {
         AppUser user = auth.current(request);
-        // Managers don't appear in the pipeline themselves.
-        List<Candidate> developers = candidates.findAll().stream()
-                .filter(c -> c.getRole() != Role.MANAGER)
-                .toList();
+        List<Candidate> everyone = candidates.findAll();
         // Scope the dashboard to what this user manages so the numbers match Onboarding/Approvals:
-        //  - managers/senior managers see their direct reportees
+        //  - managers/senior managers see everyone who reports to them (including manager reportees)
         //  - developers see only themselves
         List<Candidate> all;
         if (user.getRole() == Role.MANAGER) {
-            all = developers.stream()
+            all = everyone.stream()
                     .filter(c -> user.getName().equalsIgnoreCase(c.getReportingManager()))
                     .toList();
         } else {
-            all = developers.stream()
+            all = everyone.stream()
                     .filter(c -> c.getId().equals(user.getCandidateId()))
                     .toList();
         }
@@ -70,6 +67,8 @@ public class DashboardController {
                 .filter(c -> c.getCurrentStage() == OnboardingStage.ONBOARDED).count();
         long nominated = all.stream()
                 .filter(c -> c.getCurrentStage() == OnboardingStage.NOMINATED).count();
+        long karatFailed = all.stream()
+                .filter(c -> c.getCurrentStage() == OnboardingStage.KARAT_FAILED).count();
         long inPipeline = total - onboarded;
 
         Map<String, Long> stageBreakdown = new LinkedHashMap<>();
@@ -96,15 +95,25 @@ public class DashboardController {
             monthlyTrends.add(e);
         });
 
-        // PTS hours per month + pending approvals — scoped to the same candidates as the funnel,
-        // so "PTS Awaiting Approval" matches what the user sees on the Approvals tab.
-        Map<String, Double> ptsByMonthMap = new TreeMap<>();
+        // PTS hours for the current year (all 12 months) + pending approvals - scoped to the same
+        // candidates as the funnel, so the numbers match the Approvals tab.
+        int year = java.time.LocalDate.now().getYear();
+        Map<String, Double> ptsByMonthMap = new LinkedHashMap<>();
+        for (int mo = 1; mo <= 12; mo++) {
+            ptsByMonthMap.put(String.format("%d-%02d", year, mo), 0.0);
+        }
+        Long ownId = user.getCandidateId();
         long pendingApprovals = 0;
         for (Timesheet t : timesheets.findAll()) {
-            if (t.getCandidate() == null || !candidateIds.contains(t.getCandidate().getId())) continue;
-            ptsByMonthMap.merge(t.getMonth(), t.getTotal() == null ? 0.0 : t.getTotal(), Double::sum);
-            if (t.getStatus() == null || t.getStatus() == TimesheetStatus.SUBMITTED) {
+            Long cid = t.getCandidate() == null ? null : t.getCandidate().getId();
+            if (cid == null) continue;
+            // Approvals you owe - your direct reports' submitted timesheets.
+            if (candidateIds.contains(cid) && (t.getStatus() == null || t.getStatus() == TimesheetStatus.SUBMITTED)) {
                 pendingApprovals++;
+            }
+            // PTS hours chart - your own monthly hours.
+            if (ownId != null && ownId.equals(cid) && t.getMonth() != null && ptsByMonthMap.containsKey(t.getMonth())) {
+                ptsByMonthMap.merge(t.getMonth(), t.getTotal() == null ? 0.0 : t.getTotal(), Double::sum);
             }
         }
         List<Map<String, Object>> ptsByMonth = new ArrayList<>();
@@ -122,6 +131,7 @@ public class DashboardController {
         out.put("totalSelected", selected);
         out.put("onboarded", onboarded);
         out.put("inPipeline", inPipeline);
+        out.put("karatFailed", karatFailed);
         out.put("pendingApprovals", pendingApprovals);
         out.put("stageBreakdown", stageBreakdown);
         out.put("monthlyTrends", monthlyTrends);

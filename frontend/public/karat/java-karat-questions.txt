@@ -1,0 +1,34 @@
+KARAT ASSESSMENT - JAVA BACKEND - QUESTION BANK
+Previously asked questions, grouped by difficulty.
+=================================================================
+
+SECTION A - WARM-UP (DOABLE) - start here
+-----------------------------------------------------------------
+A1. What is the difference between == and .equals() when comparing Strings?
+A2. What does the `final` keyword do on a variable?
+A3. What is the method signature of a Java program's entry point?
+A4. In one line, how does an interface differ from an abstract class?
+A5. What does `List<String> list = new ArrayList<>();` show about programming to an interface?
+
+SECTION B - CORE (MEDIUM TO HIGH) - 20 questions
+-----------------------------------------------------------------
+1.  Explain the JVM memory model: heap, stack, and metaspace - where do objects vs references live?
+2.  How does HashMap work internally? What happens on a hash collision and on a resize?
+3.  Describe the equals()/hashCode() contract and the consequences of breaking it.
+4.  What is the difference between checked and unchecked exceptions, and when do you use each?
+5.  Explain volatile, synchronized, and the Atomic* classes - what guarantee does each provide?
+6.  How does the garbage collector decide what to collect? Describe generational GC.
+7.  What is a memory leak in Java, and how would you locate one in a running production app?
+8.  Explain dependency injection and how Spring's IoC container manages bean lifecycles.
+9.  What is the N+1 select problem in JPA, and what are the ways to fix it?
+10. Compare @Transactional propagation levels; give a case where REQUIRES_NEW is the right choice.
+11. How do Java Streams work? Explain laziness and intermediate vs terminal operations.
+12. Compare ArrayList, LinkedList, and CopyOnWriteArrayList - performance and use cases.
+13. How would you design a thread-safe in-memory cache with entry expiry?
+14. Explain how Spring Boot auto-configuration works under the hood.
+15. What is the difference between @Component, @Service, @Repository, and @Controller?
+16. How do you prevent SQL injection and validate input in a Spring REST API?
+17. Explain optimistic vs pessimistic locking in JPA and when to use each.
+18. Walk through the Spring bean lifecycle: instantiation, dependency injection, initialization.
+19. How would you design idempotent REST endpoints for a payment API?
+20. An endpoint that makes several DB calls is slow. How do you profile and fix it?

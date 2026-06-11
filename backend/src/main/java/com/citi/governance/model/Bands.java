@@ -15,9 +15,12 @@ public final class Bands {
     public static final List<String> MANAGER = List.of("b6h", "b5l", "b5h", "b4l", "b4h");
     /** Bands for developers (the remaining bands). */
     public static final List<String> DEVELOPER = List.of("b8", "b7", "b6l");
+    /** Senior-manager bands (manager bands above b6h). */
+    public static final List<String> SENIOR = List.of("b5l", "b5h", "b4l", "b4h");
     public static final String DEFAULT_MANAGER = "b6h";
 
     public static boolean isManagerBand(String band) { return MANAGER.contains(band); }
     public static boolean isDeveloperBand(String band) { return DEVELOPER.contains(band); }
+    public static boolean isSeniorBand(String band) { return SENIOR.contains(band); }
     public static boolean isValid(String band) { return ALL.contains(band); }
 }

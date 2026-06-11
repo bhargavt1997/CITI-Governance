@@ -2,21 +2,21 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth'
+import { useCrumbs } from '../crumbs'
 
 export default function TrainingDetail() {
   const { user, isManager } = useAuth()
+  const { setLabel } = useCrumbs()
   const { id } = useParams()
   const [data, setData] = useState(null)
-  const [candidates, setCandidates] = useState([])
-  const [pick, setPick] = useState('')
   const [error, setError] = useState(null)
   const [toast, setToast] = useState(null)
   const [editing, setEditing] = useState(null) // enrollment id being edited
   const [draft, setDraft] = useState({})
 
   const load = () => {
-    Promise.all([api.training(id), api.candidates()])
-      .then(([d, c]) => { setData(d); setCandidates(c) })
+    api.training(id)
+      .then((d) => { setData(d); setLabel(`/training/${id}`, d.training.title) })
       .catch((e) => setError(e.message))
   }
   useEffect(() => { load() }, [id])
@@ -26,17 +26,14 @@ export default function TrainingDetail() {
 
   const { training: t, enrollments } = data
   const enrolledIds = new Set(enrollments.map((e) => e.candidate.id))
-  const available = candidates.filter((c) => !enrolledIds.has(c.id))
-
   const myEnrolled = user.candidateId != null && enrolledIds.has(user.candidateId)
 
-  const enroll = async (candidateId) => {
-    if (!candidateId) return
+  const enroll = async () => {
+    if (user.candidateId == null) return
     try {
-      await api.enroll(t.id, Number(candidateId))
-      setPick('')
+      await api.enroll(t.id, Number(user.candidateId))
       load()
-      setToast('Candidate enrolled ✓')
+      setToast('Enrolled ✓')
       setTimeout(() => setToast(null), 2500)
     } catch (e) {
       setToast(e.message)
@@ -67,7 +64,7 @@ export default function TrainingDetail() {
       <h1 className="page-title">{t.title}</h1>
       <p className="page-sub">
         <span className="badge blue">{t.category || 'General'}</span>{' '}
-        📚 {t.provider || '—'} {t.targetDate && <>· 🎯 Target {t.targetDate}</>} · Added by {t.createdBy || '—'}
+        📚 {t.provider || '-'} {t.targetDate && <>· 🎯 Target {t.targetDate}</>} · Added by {t.createdBy || '-'}
       </p>
 
       <div className="card" style={{ marginBottom: 16 }}>
@@ -78,20 +75,10 @@ export default function TrainingDetail() {
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
           <h3 style={{ margin: 0 }}>Enrolled Candidates ({enrollments.length})</h3>
-          {isManager ? (
-            <span style={{ display: 'flex', gap: 8 }}>
-              <select value={pick} onChange={(e) => setPick(e.target.value)}>
-                <option value="">Select candidate to enroll…</option>
-                {available.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-              <button className="btn small" disabled={!pick} onClick={() => enroll(pick)}>Enroll</button>
-            </span>
-          ) : (
-            user.candidateId != null && (
-              myEnrolled
-                ? <span className="badge green">You are enrolled</span>
-                : <button className="btn small" onClick={() => enroll(user.candidateId)}>Enroll myself</button>
-            )
+          {user.candidateId != null && (
+            myEnrolled
+              ? <button className="btn small" disabled>Enrolled</button>
+              : <button className="btn small" onClick={enroll}>Enroll</button>
           )}
         </div>
 
@@ -152,7 +139,7 @@ export default function TrainingDetail() {
                           <span style={{ fontSize: 12 }}>{e.progressPct}%</span>
                         </div>
                       </td>
-                      <td style={{ fontSize: 12.5, color: 'var(--muted)' }}>{e.notes || '—'}</td>
+                      <td style={{ fontSize: 12.5, color: 'var(--muted)' }}>{e.notes || '-'}</td>
                       <td>
                         {(isManager || e.candidate.id === user.candidateId) && (
                           <button className="btn small secondary" onClick={() => startEdit(e)}>Update</button>

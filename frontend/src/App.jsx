@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink, Route, Routes, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { api } from './api'
 import { useAuth } from './auth'
+import { useCrumbs } from './crumbs'
 import Login from './pages/Login.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Timesheet from './pages/Timesheet.jsx'
@@ -25,12 +26,13 @@ const CRUMB_NAMES = {
 
 function Breadcrumb() {
   const { pathname } = useLocation()
+  const { labels } = useCrumbs()
   const parts = pathname.split('/').filter(Boolean)
   const crumbs = [{ label: 'Citi Governance', to: '/' }]
   let acc = ''
   for (const part of parts) {
     acc += `/${part}`
-    crumbs.push({ label: CRUMB_NAMES[part] || `#${part}`, to: acc })
+    crumbs.push({ label: CRUMB_NAMES[part] || labels[acc] || `#${part}`, to: acc })
   }
   if (parts.length === 0) crumbs.push({ label: 'Dashboard', to: '/' })
   return (
@@ -89,7 +91,7 @@ function SearchBox() {
               onClick={() => { setOpen(false); setQ(''); navigate(`/profiles/${c.id}`) }}
             >
               <strong>{c.name}</strong>
-              <span>{c.soeid || 'No SOEID'} · {c.pod || '—'}</span>
+              <span>{c.soeid || 'No SOEID'} · {c.pod || '-'}</span>
             </div>
           ))}
         </div>
@@ -145,7 +147,6 @@ function Shell() {
     <div className="app">
       <aside className="sidebar">
         <div className="logo">
-          <span className="logo-mark">CG</span>
           <span>Citi Governance</span>
         </div>
         <nav>

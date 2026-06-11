@@ -49,7 +49,7 @@ public class TimesheetController {
     @PostMapping
     public Timesheet save(@RequestBody Map<String, Object> body, HttpServletRequest req) {
         Long candidateId = ((Number) body.get("candidateId")).longValue();
-        // You fill only your own timesheet — managers approve their reports, they do not fill them.
+        // You fill only your own timesheet - managers approve their reports, they do not fill them.
         auth.requireSelf(req, candidateId);
         String month = (String) body.get("month");
         if (month == null || !month.matches("\\d{4}-\\d{2}")) {
@@ -78,7 +78,7 @@ public class TimesheetController {
         return timesheets.save(t);
     }
 
-    /** Manager decision on a submitted timesheet — only for the manager's own direct reports. */
+    /** Manager decision on a submitted timesheet - only for the manager's own direct reports. */
     @PostMapping("/{id}/decision")
     public Timesheet decide(@PathVariable Long id, @RequestBody Map<String, Object> body, HttpServletRequest req) {
         AppUser manager = auth.requireManager(req);

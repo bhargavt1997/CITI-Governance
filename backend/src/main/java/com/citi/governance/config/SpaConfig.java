@@ -28,7 +28,7 @@ public class SpaConfig implements WebMvcConfigurer {
                         if (requested.exists() && requested.isReadable()) {
                             return requested;
                         }
-                        // Don't swallow API or API-docs/Swagger routes — let their own handlers serve them.
+                        // Don't swallow API or API-docs/Swagger routes - let their own handlers serve them.
                         if (resourcePath.startsWith("api/")
                                 || resourcePath.startsWith("v3/")
                                 || resourcePath.startsWith("swagger-ui")

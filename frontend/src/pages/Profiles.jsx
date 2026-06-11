@@ -27,7 +27,7 @@ export default function Profiles() {
         {isManager
           ? 'The people who report to you and where each of them stands.'
           : teamManager
-            ? <>Your team — everyone who reports to <strong>{teamManager}</strong>.</>
+            ? <>Your team - everyone who reports to <strong>{teamManager}</strong>.</>
             : 'You haven\'t been assigned to a reporting manager yet.'}
       </p>
 
@@ -51,12 +51,12 @@ export default function Profiles() {
                   {c.id === user.candidateId && <span className="badge blue" style={{ marginLeft: 6 }}>You</span>}
                   <div style={{ fontSize: 11, color: 'var(--muted)' }}>{c.email}</div>
                 </td>
-                <td>{c.band ? bandLabel(c.band) : '—'}</td>
-                <td>{c.soeid || '—'}</td>
-                <td>{c.location || '—'}</td>
-                <td>{c.pod || '—'}</td>
-                <td><span className={`badge ${c.currentStage === 'ONBOARDED' ? 'green' : 'blue'}`}>{STAGE_LABELS[c.currentStage]}</span></td>
-                <td>{c.joinDate || '—'}</td>
+                <td>{c.band ? bandLabel(c.band) : '-'}</td>
+                <td>{c.soeid || '-'}</td>
+                <td>{c.location || '-'}</td>
+                <td>{c.pod || '-'}</td>
+                <td><span className={`badge ${c.currentStage === 'ONBOARDED' ? 'green' : c.currentStage === 'KARAT_FAILED' ? 'red' : 'blue'}`}>{STAGE_LABELS[c.currentStage]}</span></td>
+                <td>{c.joinDate || '-'}</td>
               </tr>
             ))}
           </tbody>

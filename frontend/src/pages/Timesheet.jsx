@@ -125,7 +125,7 @@ export default function Timesheet() {
           <span className="ts-note ok">Approved by {ownSheet.approvedBy}</span>
         )}
         {ownSheet?.status === 'REJECTED' && !ownDirty && (
-          <span className="ts-note bad">Rejected by {ownSheet.approvedBy} — please revise and resubmit</span>
+          <span className="ts-note bad">Rejected by {ownSheet.approvedBy} - please revise and resubmit</span>
         )}
         {(!ownSheet || ownDirty) && <span className="ts-note">Saving (re)submits the month for your manager's approval.</span>}
         <button className="btn" disabled={!ownDirty && !!ownSheet} onClick={saveOwn}>
@@ -157,11 +157,11 @@ export default function Timesheet() {
                 </td>
                 {WEEKS.map((wk) => (
                   <td key={wk} style={{ textAlign: 'right', color: sheet ? 'var(--ink)' : 'var(--faint)' }}>
-                    {sheet ? sheet[wk] : '—'}
+                    {sheet ? sheet[wk] : '-'}
                   </td>
                 ))}
                 <td style={{ textAlign: 'right' }}>
-                  <strong style={{ color: 'var(--blue-dark)' }}>{sheet ? (sheet.total ?? sumWeeks(sheet)) : '—'}</strong>
+                  <strong style={{ color: 'var(--blue-dark)' }}>{sheet ? (sheet.total ?? sumWeeks(sheet)) : '-'}</strong>
                 </td>
                 <td><StatusBadge sheet={sheet} /></td>
                 <td>

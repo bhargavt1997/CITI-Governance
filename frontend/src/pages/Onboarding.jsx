@@ -1,44 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { api, STAGES, STAGE_LABELS, DEVELOPER_BANDS, bandLabel } from '../api'
+import { api, STAGES, STAGE_LABELS, bandLabel, soeidVisible } from '../api'
 import { useAuth } from '../auth'
-
-function AddCandidateModal({ onClose, onCreated, leadName }) {
-  const [form, setForm] = useState({ name: '', email: '', band: 'b6l', wave: 'Wave 3', pod: '', reportingManager: leadName })
-  const [err, setErr] = useState(null)
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
-
-  const submit = async () => {
-    if (!form.name.trim() || !form.email.trim()) { setErr('Name and email are required'); return }
-    try {
-      await api.createCandidate(form)
-      onCreated()
-    } catch (e) { setErr(e.message) }
-  }
-
-  return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>Nominate New Candidate</h3>
-        {err && <div className="error-banner">{err}</div>}
-        <div className="form-row"><label>Full Name *</label><input type="text" value={form.name} onChange={set('name')} /></div>
-        <div className="form-row"><label>Email *</label><input type="text" value={form.email} onChange={set('email')} /></div>
-        <div className="form-row"><label>Band</label>
-          <select value={form.band} onChange={set('band')}>
-            {DEVELOPER_BANDS.map((b) => <option key={b} value={b}>{bandLabel(b)}</option>)}
-          </select>
-        </div>
-        <div className="form-row"><label>Wave</label><input type="text" value={form.wave} onChange={set('wave')} /></div>
-        <div className="form-row"><label>Pod</label><input type="text" value={form.pod} onChange={set('pod')} /></div>
-        <div className="form-row"><label>Reporting Manager</label><input type="text" value={form.reportingManager} onChange={set('reportingManager')} /></div>
-        <div className="actions">
-          <button className="btn secondary" onClick={onClose}>Cancel</button>
-          <button className="btn" onClick={submit}>Nominate</button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 const initials = (name) => name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
 
@@ -46,19 +9,15 @@ export default function Onboarding() {
   const { user, isManager, isSeniorManager } = useAuth()
   const navigate = useNavigate()
   const [candidates, setCandidates] = useState([])
-  const [showAdd, setShowAdd] = useState(false)
   const [error, setError] = useState(null)
   const [toast, setToast] = useState(null)
   const [dragId, setDragId] = useState(null)
   const [dropStage, setDropStage] = useState(null)
 
-  // Managers/senior managers only; the board shows their direct reportees.
-  // (Senior managers can see everyone via the Org Directory.)
+  // Managers/senior managers only; the board shows everyone who reports to them
+  // (including managers who report to them, e.g. a senior manager seeing their managers).
   const load = () => api.candidates()
-    .then((cs) => {
-      const devs = cs.filter((c) => c.role !== 'MANAGER')
-      setCandidates(devs.filter((c) => c.reportingManager === user.name))
-    })
+    .then((cs) => setCandidates(cs.filter((c) => c.reportingManager === user.name)))
     .catch((e) => setError(e.message))
   useEffect(() => { load() }, [])
 
@@ -108,7 +67,6 @@ export default function Onboarding() {
             Open Org Directory →
           </button>
         )}
-        {isManager && <button className="btn" onClick={() => setShowAdd(true)}>+ Nominate Candidate</button>}
       </div>
 
       <div className="lanes">
@@ -118,7 +76,7 @@ export default function Onboarding() {
           return (
             <div
               key={s}
-              className={`lane ${done ? 'done' : ''} ${dropStage === s ? 'drop' : ''}`}
+              className={`lane ${done ? 'done' : ''} ${s === 'KARAT_FAILED' ? 'failed' : ''} ${dropStage === s ? 'drop' : ''}`}
               onDragOver={isManager ? (e) => { e.preventDefault(); if (dropStage !== s) setDropStage(s) } : undefined}
               onDragLeave={isManager ? () => setDropStage((p) => (p === s ? null : p)) : undefined}
               onDrop={isManager ? () => onDrop(s) : undefined}
@@ -141,12 +99,12 @@ export default function Onboarding() {
                       <span className="kc-avatar">{initials(c.name)}</span>
                       <span className="kc-name">{c.name}</span>
                     </div>
-                    <div className="kc-meta">{c.pod || '—'} · {c.wave || '—'}</div>
+                    <div className="kc-meta">{c.pod || '-'} · {c.wave || '-'}</div>
                     <div className="kc-tags">
                       {c.band && <span className="badge gray">{bandLabel(c.band)}</span>}
-                      {c.soeid
+                      {soeidVisible(c.currentStage) && (c.soeid
                         ? <span className="badge blue">{c.soeid}</span>
-                        : <span className="badge amber">SOEID pending</span>}
+                        : <span className="badge amber">SOEID pending</span>)}
                     </div>
                   </div>
                 ))}
@@ -157,13 +115,6 @@ export default function Onboarding() {
         })}
       </div>
 
-      {showAdd && (
-        <AddCandidateModal
-          leadName={user.name}
-          onClose={() => setShowAdd(false)}
-          onCreated={() => { setShowAdd(false); load() }}
-        />
-      )}
       {toast && <div className="toast">{toast}</div>}
     </div>
   )

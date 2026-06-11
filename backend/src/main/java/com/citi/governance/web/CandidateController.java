@@ -82,6 +82,10 @@ public class CandidateController {
     public Candidate setSoeid(@PathVariable Long id, @RequestBody Map<String, String> body, HttpServletRequest req) {
         auth.requireManagerOrSelf(req, id);
         Candidate c = get(id);
+        if (c.getCurrentStage().ordinal() < OnboardingStage.ONBOARDING_INITIATED.ordinal()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "SOEID can be added only once onboarding has started");
+        }
         if (c.getSoeid() != null && !c.getSoeid().isBlank()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "SOEID already set and cannot be changed");
         }
@@ -150,8 +154,14 @@ public class CandidateController {
         if (c.getCurrentStage() == target) {
             return c; // no change
         }
+        // A candidate must have a SOEID before they can be onboarded.
+        if (target == OnboardingStage.ONBOARDED && (c.getSoeid() == null || c.getSoeid().isBlank())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Add a SOEID before onboarding this candidate");
+        }
         c.setCurrentStage(target);
-        if (target == OnboardingStage.ONBOARDED && c.getJoinDate() == null) {
+        // Joining date is the day the candidate is onboarded.
+        if (target == OnboardingStage.ONBOARDED) {
             c.setJoinDate(java.time.LocalDate.now());
         }
         candidates.save(c);

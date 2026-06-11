@@ -3,8 +3,9 @@ import { useParams } from 'react-router-dom'
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
 } from 'recharts'
-import { api, STAGE_LABELS, ALL_BANDS, bandLabel } from '../api'
+import { api, STAGE_LABELS, ALL_BANDS, bandLabel, soeidVisible } from '../api'
 import { useAuth } from '../auth'
+import { useCrumbs } from '../crumbs'
 
 const AXES = [
   { key: 'skillTechnical', label: 'Technical', field: 'technical' },
@@ -16,6 +17,7 @@ const AXES = [
 
 export default function ProfileDetail() {
   const { user, isManager } = useAuth()
+  const { setLabel } = useCrumbs()
   const { id } = useParams()
   const [c, setC] = useState(null)
   const [enrollments, setEnrollments] = useState([])
@@ -31,7 +33,7 @@ export default function ProfileDetail() {
 
   const load = () => {
     Promise.all([api.candidate(id), api.candidateEnrollments(id)])
-      .then(([cand, enr]) => { setC(cand); setEnrollments(enr) })
+      .then(([cand, enr]) => { setC(cand); setEnrollments(enr); setLabel(`/profiles/${id}`, cand.name) })
       .catch((e) => setError(e.message))
   }
   useEffect(() => { load() }, [id])
@@ -103,8 +105,11 @@ export default function ProfileDetail() {
     <div>
       <h1 className="page-title">{c.name}</h1>
       <p className="page-sub">
-        {c.email} · <span className="badge gray">{c.soeid || 'SOEID pending'}</span>{' '}
-        <span className={`badge ${c.currentStage === 'ONBOARDED' ? 'green' : 'blue'}`}>{STAGE_LABELS[c.currentStage]}</span>
+        {c.email}{' '}
+        {soeidVisible(c.currentStage) && (
+          <><span className="badge gray">{c.soeid || 'SOEID pending'}</span>{' '}</>
+        )}
+        <span className={`badge ${c.currentStage === 'ONBOARDED' ? 'green' : c.currentStage === 'KARAT_FAILED' ? 'red' : 'blue'}`}>{STAGE_LABELS[c.currentStage]}</span>
       </p>
 
       <div className="two-col">
@@ -124,17 +129,17 @@ export default function ProfileDetail() {
           {!editDetails ? (
             <>
               <div className="field-grid">
-                <div className="field"><label>Employee ID</label><div>{c.employeeId || '—'}</div></div>
-                <div className="field"><label>Band</label><div>{c.band ? bandLabel(c.band) : '—'}</div></div>
-                <div className="field"><label>Wave</label><div>{c.wave || '—'}</div></div>
-                <div className="field"><label>Pod</label><div>{c.pod || '—'}</div></div>
-                <div className="field"><label>Location</label><div>{c.location || '—'}</div></div>
-                <div className="field"><label>Join Date</label><div>{c.joinDate || '—'}</div></div>
+                <div className="field"><label>Employee ID</label><div>{c.employeeId || '-'}</div></div>
+                <div className="field"><label>Band</label><div>{c.band ? bandLabel(c.band) : '-'}</div></div>
+                <div className="field"><label>Wave</label><div>{c.wave || '-'}</div></div>
+                <div className="field"><label>Pod</label><div>{c.pod || '-'}</div></div>
+                <div className="field"><label>Location</label><div>{c.location || '-'}</div></div>
+                <div className="field"><label>Join Date</label><div>{c.joinDate || '-'}</div></div>
                 <div className="field">
                   <label>Reporting Manager</label>
                   {!editManager ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {c.reportingManager || '—'}
+                      {c.reportingManager || '-'}
                       {isManager && (
                         <button
                           className="btn small secondary"
@@ -168,7 +173,7 @@ export default function ProfileDetail() {
               <div className="field"><label>Employee ID</label><input type="text" value={detailsDraft.employeeId} onChange={setField('employeeId')} /></div>
               <div className="field"><label>Band</label>
                 <select value={detailsDraft.band || ''} onChange={setField('band')}>
-                  <option value="">—</option>
+                  <option value="">-</option>
                   {ALL_BANDS.map((b) => <option key={b} value={b}>{bandLabel(b)}</option>)}
                 </select>
               </div>
@@ -233,7 +238,7 @@ export default function ProfileDetail() {
             <tbody>
               {enrollments.map((e) => (
                 <tr key={e.id}>
-                  <td><strong>{e.trainingTitle || '—'}</strong></td>
+                  <td><strong>{e.trainingTitle || '-'}</strong></td>
                   <td><span className={`badge ${e.status === 'COMPLETED' ? 'green' : e.status === 'IN_PROGRESS' ? 'amber' : 'gray'}`}>{e.status.replace('_', ' ')}</span></td>
                   <td style={{ width: 220 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -243,7 +248,7 @@ export default function ProfileDetail() {
                       <span style={{ fontSize: 12 }}>{e.progressPct}%</span>
                     </div>
                   </td>
-                  <td style={{ fontSize: 12.5, color: 'var(--muted)' }}>{e.notes || '—'}</td>
+                  <td style={{ fontSize: 12.5, color: 'var(--muted)' }}>{e.notes || '-'}</td>
                 </tr>
               ))}
             </tbody>

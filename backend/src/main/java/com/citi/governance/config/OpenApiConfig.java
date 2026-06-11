@@ -19,7 +19,7 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("Citi Governance API")
                         .version("v1")
-                        .description("REST API for the Citi Governance platform — auth, onboarding, "
+                        .description("REST API for the Citi Governance platform - auth, onboarding, "
                                 + "PTS timesheets, profiles, training and KARAT assessment. "
                                 + "Most endpoints require a bearer token (obtain one from POST /api/auth/login)."))
                 .addSecurityItem(new SecurityRequirement().addList(BEARER))

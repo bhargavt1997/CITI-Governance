@@ -58,7 +58,6 @@ export default function Login() {
   return (
     <div className="login-page">
       <form className="login-card" onSubmit={submit}>
-        <div className="login-logo">CG</div>
         <h2>Citi Governance</h2>
         <p className="login-sub">{isRegister ? 'Create your account' : 'Sign in to continue'}</p>
 
@@ -122,13 +121,13 @@ export default function Login() {
             <label className="login-label">Reporting manager</label>
             <select value={reportingManager} onChange={(e) => setReportingManager(e.target.value)}>
               <option value="">
-                {managers.length ? 'Select your manager…' : 'No managers yet — leave blank'}
+                {managers.length ? 'Select your manager…' : 'No managers yet - leave blank'}
               </option>
               {managers.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
             </select>
             <span className="login-help">
               {role === 'MANAGER'
-                ? 'Optional — managers can report to another manager.'
+                ? 'Optional - managers can report to another manager.'
                 : 'Your manager approves your PTS timesheets.'}
             </span>
           </>

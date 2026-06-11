@@ -46,18 +46,27 @@ public class AuthController {
         return tokenResponse(user);
     }
 
-    /** Public list of managers, used to populate the reporting-manager dropdown on the registration screen. */
+    /** Public list of managers eligible to be a reporting manager (onboarded only). */
     @GetMapping("/managers")
     public List<Map<String, Object>> managers() {
         return users.findAll().stream()
                 .filter(u -> u.getRole() == Role.MANAGER)
+                .filter(this::isOnboarded)
                 .map(u -> Map.<String, Object>of("id", u.getId(), "name", u.getName(), "email", u.getEmail()))
                 .toList();
     }
 
+    /** A person can only have reportees once they are onboarded. */
+    private boolean isOnboarded(AppUser u) {
+        return u.getCandidateId() != null
+                && candidates.findById(u.getCandidateId())
+                        .map(c -> c.getCurrentStage() == OnboardingStage.ONBOARDED)
+                        .orElse(false);
+    }
+
     /**
      * Self-service registration. Creates a login plus a linked candidate record (so the user can fill PTS and
-     * has a profile). Works for both roles; a reporting manager can be mapped for anyone — including managers.
+     * has a profile). Works for both roles; a reporting manager can be mapped for anyone - including managers.
      */
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
@@ -100,10 +109,11 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "An account with this email already exists");
         }
         if (reportingManager != null) {
-            boolean known = users.findAll().stream()
-                    .anyMatch(u -> u.getRole() == Role.MANAGER && u.getName().equalsIgnoreCase(reportingManager));
-            if (!known) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown reporting manager");
+            boolean valid = users.findAll().stream()
+                    .filter(u -> u.getRole() == Role.MANAGER && u.getName().equalsIgnoreCase(reportingManager))
+                    .anyMatch(this::isOnboarded);
+            if (!valid) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reporting manager must be an onboarded manager");
             }
         }
 
