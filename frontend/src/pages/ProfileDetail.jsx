@@ -37,7 +37,8 @@ export default function ProfileDetail() {
       .catch((e) => setError(e.message))
   }
   useEffect(() => { load() }, [id])
-  useEffect(() => { if (isManager) api.managers().then(setLeads).catch(() => {}) }, [isManager])
+  // Fetch managers for everyone (used for the reporting-manager email tooltip; managers also use it to remap).
+  useEffect(() => { api.managers().then(setLeads).catch(() => {}) }, [])
 
   const saveManager = async () => {
     try {
@@ -139,7 +140,9 @@ export default function ProfileDetail() {
                   <label>Reporting Manager</label>
                   {!editManager ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {c.reportingManager || '-'}
+                      <span title={(leads.find((l) => l.name === c.reportingManager) || {}).email || undefined}>
+                        {c.reportingManager || '-'}
+                      </span>
                       {isManager && (
                         <button
                           className="btn small secondary"

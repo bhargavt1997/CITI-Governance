@@ -40,14 +40,15 @@ export default function DeveloperDashboard() {
   })
   const hoursThisYear = ptsData.reduce((s, d) => s + (d.hours || 0), 0)
 
-  const stageIdx = STAGES.indexOf(c.currentStage)
-  const progressPct = c.currentStage === 'ONBOARDED'
-    ? 100
-    : Math.round((stageIdx / (STAGES.length - 1)) * 100)
+  // Happy-path milestones (KARAT Failed is a detour, not a normal step).
+  const JOURNEY = STAGES.filter((s) => s !== 'KARAT_FAILED')
+  const failed = c.currentStage === 'KARAT_FAILED'
+  const journeyStage = failed ? 'CARAT_INTERVIEW' : c.currentStage
+  const curIdx = JOURNEY.indexOf(journeyStage)
   const completed = enrollments.filter((e) => e.status === 'COMPLETED').length
 
   const kpis = [
-    { label: 'Onboarding Step', value: `${stageIdx + 1}/${STAGES.length}` },
+    { label: 'Onboarding Step', value: `${curIdx + 1}/${JOURNEY.length}` },
     { label: 'Trainings', value: enrollments.length, to: '/training' },
     { label: 'Completed', value: completed, to: '/training' },
     { label: `PTS Hours · ${year}`, value: hoursThisYear, to: '/pts' },
@@ -73,19 +74,26 @@ export default function DeveloperDashboard() {
       </div>
 
       <div className="card" style={{ marginBottom: 18 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-          <h3 style={{ margin: 0 }}>My Onboarding Journey</h3>
-          <span className={`badge ${c.currentStage === 'ONBOARDED' ? 'green' : c.currentStage === 'KARAT_FAILED' ? 'red' : 'blue'}`}>
-            {STAGE_LABELS[c.currentStage]}
-          </span>
+        <h3>My Onboarding Journey</h3>
+        <div className="journey">
+          {JOURNEY.map((s, i) => {
+            const state = failed && i === curIdx ? 'failed'
+              : i < curIdx ? 'done'
+              : i === curIdx ? 'current'
+              : 'upcoming'
+            return (
+              <div className={`jstep ${state}`} key={s}>
+                <div className="jdot">{state === 'done' ? '✓' : state === 'failed' ? '✕' : i + 1}</div>
+                <div className="jlabel">{STAGE_LABELS[s]}</div>
+              </div>
+            )
+          })}
         </div>
-        <div className="progress-track" style={{ height: 10 }}>
-          <div className="progress-fill" style={{ width: `${progressPct}%` }} />
-        </div>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>
-          Step {stageIdx + 1} of {STAGES.length}
-          {c.currentStage === 'ONBOARDED' && c.joinDate ? ` · joined ${c.joinDate}` : ''}
-        </div>
+        {failed && (
+          <div className="jnote bad">
+            You did not clear the KARAT assessment, so the onboarding journey ends here.
+          </div>
+        )}
       </div>
 
       <div className="grid charts">

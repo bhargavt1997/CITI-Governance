@@ -327,6 +327,28 @@ select:focus, input:focus, textarea:focus {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ================= Developer onboarding journey (stepper) ================= */
+.journey { display: flex; align-items: flex-start; overflow-x: auto; padding: 10px 2px 4px; }
+.jstep { flex: 1; min-width: 96px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; }
+.jstep .jdot {
+  width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; background: #e7eaf1; color: var(--faint); z-index: 1;
+}
+.jstep .jlabel { font-size: 10.5px; margin-top: 8px; color: var(--faint); line-height: 1.3; max-width: 100px; font-weight: 500; }
+.jstep:not(:last-child)::after {
+  content: ''; position: absolute; top: 14px; left: calc(50% + 15px); width: calc(100% - 30px);
+  height: 2.5px; background: #e7eaf1; border-radius: 2px;
+}
+.jstep.done .jdot { background: var(--accent); color: #fff; }
+.jstep.done .jlabel { color: var(--ink); font-weight: 600; }
+.jstep.done:not(:last-child)::after { background: var(--accent); }
+.jstep.current .jdot { background: var(--accent); color: #fff; box-shadow: 0 0 0 4px var(--accent-soft); }
+.jstep.current .jlabel { color: var(--ink); font-weight: 700; }
+.jstep.failed .jdot { background: var(--red); color: #fff; box-shadow: 0 0 0 4px var(--red-bg); }
+.jstep.failed .jlabel { color: var(--red); font-weight: 700; }
+.jnote { margin-top: 16px; font-size: 13px; color: var(--muted); }
+.jnote.bad { color: var(--red); font-weight: 600; }
+
 /* ================= Onboarding Kanban (horizontal swimlanes) ================= */
 .lanes { display: flex; flex-direction: column; gap: 12px; }
 .lane {
