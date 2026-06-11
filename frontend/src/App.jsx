@@ -11,6 +11,7 @@ import ProfileDetail from './pages/ProfileDetail.jsx'
 import Training from './pages/Training.jsx'
 import TrainingDetail from './pages/TrainingDetail.jsx'
 import KaratAssessment from './pages/KaratAssessment.jsx'
+import People from './pages/People.jsx'
 
 const CRUMB_NAMES = {
   '': 'Dashboard',
@@ -19,6 +20,7 @@ const CRUMB_NAMES = {
   profiles: 'Profiles',
   training: 'Training',
   karat: 'KARAT Assessment',
+  people: 'All People',
 }
 
 function Breadcrumb() {
@@ -97,7 +99,7 @@ function SearchBox() {
 }
 
 function UserMenu() {
-  const { user, logout } = useAuth()
+  const { user, logout, roleLabel } = useAuth()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   const navigate = useNavigate()
@@ -121,7 +123,7 @@ function UserMenu() {
       <button className="user-chip" onClick={() => setOpen(!open)}>
         <span className="avatar">{initials}</span>
         <span className="user-name">{user.name}</span>
-        <span className="user-role">{user.role}</span>
+        <span className="user-role">{roleLabel}</span>
       </button>
       {open && (
         <div className="user-dropdown">
@@ -138,7 +140,7 @@ function UserMenu() {
 }
 
 function Shell() {
-  const { user } = useAuth()
+  const { user, isSeniorManager, roleLabel } = useAuth()
   return (
     <div className="app">
       <aside className="sidebar">
@@ -153,9 +155,10 @@ function Shell() {
           <NavLink to="/profiles">Profiles</NavLink>
           <NavLink to="/training">Training</NavLink>
           <NavLink to="/karat">KARAT Assessment</NavLink>
+          {isSeniorManager && <NavLink to="/people">All People</NavLink>}
         </nav>
         <div className="sidebar-foot">
-          Signed in as <strong>{user.name.split(' ')[0]}</strong> · {user.role === 'MANAGER' ? 'Manager' : 'Developer'}
+          Signed in as <strong>{user.name.split(' ')[0]}</strong> · {roleLabel}
         </div>
       </aside>
       <div className="main">
@@ -207,6 +210,7 @@ export default function App() {
         <Route path="/training" element={<Training />} />
         <Route path="/training/:id" element={<TrainingDetail />} />
         <Route path="/karat" element={<KaratAssessment />} />
+        <Route path="/people" element={<People />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

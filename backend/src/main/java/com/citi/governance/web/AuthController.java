@@ -140,7 +140,15 @@ public class AuthController {
 
     @GetMapping("/me")
     public AppUser me(HttpServletRequest request) {
-        return auth.current(request);
+        return withBand(auth.current(request));
+    }
+
+    /** Populate the transient band from the linked candidate so the client can gate by band. */
+    private AppUser withBand(AppUser u) {
+        if (u.getCandidateId() != null) {
+            candidates.findById(u.getCandidateId()).ifPresent((c) -> u.setBand(c.getBand()));
+        }
+        return u;
     }
 
     @PostMapping("/logout")
@@ -156,7 +164,7 @@ public class AuthController {
         AuthToken token = auth.issueToken(user);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("token", token.getToken());
-        out.put("user", user);
+        out.put("user", withBand(user));
         return out;
     }
 

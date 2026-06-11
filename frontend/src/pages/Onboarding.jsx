@@ -43,7 +43,7 @@ function AddCandidateModal({ onClose, onCreated, leadName }) {
 const initials = (name) => name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
 
 export default function Onboarding() {
-  const { user, isManager } = useAuth()
+  const { user, isManager, isSeniorManager } = useAuth()
   const navigate = useNavigate()
   const [candidates, setCandidates] = useState([])
   const [showAdd, setShowAdd] = useState(false)
@@ -98,6 +98,11 @@ export default function Onboarding() {
         <span className="badge blue">{candidates.length} in pipeline</span>
         <span className="badge green">{onboardedCount} onboarded</span>
         <div className="spacer" />
+        {isSeniorManager && (
+          <button className="btn secondary" onClick={() => navigate('/people')}>
+            View all registered people →
+          </button>
+        )}
         {isManager && <button className="btn" onClick={() => setShowAdd(true)}>+ Nominate Candidate</button>}
       </div>
 

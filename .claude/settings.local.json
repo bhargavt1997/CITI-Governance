@@ -91,7 +91,9 @@
       "Bash(curl -s -o /dev/null -w \"  HTTP %{http_code}\\\\n\" -X POST http://localhost:8080/api/auth/register -H 'Content-Type: application/json' -d '{\"name\":\"Mgr Six\",\"email\":\"m6@deloitte.com\",\"password\":\"Citi@123\",\"role\":\"MANAGER\",\"band\":\"b6h\",\"reportingManager\":\"Suresh Iyer\"}')",
       "Bash(curl -s -o /dev/null -w \"  HTTP %{http_code}\\\\n\" -X POST http://localhost:8080/api/auth/register -H 'Content-Type: application/json' -d '{\"name\":\"X\",\"email\":\"t1@deloitte.com\",\"password\":\"Citi@123\",\"role\":\"MANAGER\",\"band\":\"b7\"}')",
       "Bash(curl -s -o /dev/null -w \"  HTTP %{http_code}\\\\n\" -X POST http://localhost:8080/api/auth/register -H 'Content-Type: application/json' -d '{\"name\":\"M4\",\"email\":\"t2@deloitte.com\",\"password\":\"Citi@123\",\"role\":\"MANAGER\",\"band\":\"b4l\",\"reportingManager\":\"Suresh Iyer\"}')",
-      "Bash(curl -s -o /dev/null -w \"  HTTP %{http_code}\\\\n\" -X POST http://localhost:8080/api/auth/register -H 'Content-Type: application/json' -d '{\"name\":\"D8\",\"email\":\"t3@deloitte.com\",\"password\":\"Citi@123\",\"role\":\"DEVELOPER\",\"band\":\"b8\"}')"
+      "Bash(curl -s -o /dev/null -w \"  HTTP %{http_code}\\\\n\" -X POST http://localhost:8080/api/auth/register -H 'Content-Type: application/json' -d '{\"name\":\"D8\",\"email\":\"t3@deloitte.com\",\"password\":\"Citi@123\",\"role\":\"DEVELOPER\",\"band\":\"b8\"}')",
+      "Bash(python3 -c 'import sys,json;u=json.load\\(sys.stdin\\)[\"user\"];print\\(\"  role:\",u[\"role\"],\"| band:\",u.get\\(\"band\"\\),\"| name:\",u[\"name\"]\\)')",
+      "Bash(python3 -c 'import sys,json;u=json.load\\(sys.stdin\\)[\"user\"];print\\(\"  role:\",u[\"role\"],\"| band:\",u.get\\(\"band\"\\)\\)')"
     ]
   }
 }

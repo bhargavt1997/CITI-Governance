@@ -28,6 +28,10 @@ public class AppUser {
     /** Linked candidate record (null for pure lead accounts without a candidate profile). */
     private Long candidateId;
 
+    /** Not persisted — populated from the linked candidate when returning the user to the client. */
+    @Transient
+    private String band;
+
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public Long getId() { return id; }
@@ -42,6 +46,8 @@ public class AppUser {
     public void setRole(Role role) { this.role = role; }
     public Long getCandidateId() { return candidateId; }
     public void setCandidateId(Long candidateId) { this.candidateId = candidateId; }
+    public String getBand() { return band; }
+    public void setBand(String band) { this.band = band; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }
