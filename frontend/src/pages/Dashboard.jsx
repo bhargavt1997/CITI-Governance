@@ -30,12 +30,12 @@ export default function Dashboard() {
   if (!summary) return <div className="empty">Loading dashboard…</div>
 
   const kpis = [
-    { label: 'Total Candidates', value: summary.totalCandidates },
-    { label: 'Newly Nominated', value: summary.nominated },
-    { label: 'KARAT Cleared', value: summary.caratCleared },
-    { label: 'Total Selected', value: summary.totalSelected },
-    { label: 'Onboarded', value: summary.onboarded },
-    { label: 'PTS Awaiting Approval', value: summary.pendingApprovals ?? 0 },
+    { label: 'Total Candidates', value: summary.totalCandidates, to: '/onboarding' },
+    { label: 'Newly Nominated', value: summary.nominated, to: '/onboarding' },
+    { label: 'KARAT Cleared', value: summary.caratCleared, to: '/onboarding' },
+    { label: 'Total Selected', value: summary.totalSelected, to: '/onboarding' },
+    { label: 'Onboarded', value: summary.onboarded, to: '/onboarding' },
+    { label: 'PTS Awaiting Approval', value: summary.pendingApprovals ?? 0, to: '/pts' },
   ]
 
   const pieData = Object.entries(summary.stageBreakdown)
@@ -49,7 +49,7 @@ export default function Dashboard() {
 
       <div className="grid kpis">
         {kpis.map((k) => (
-          <div className="card kpi" key={k.label}>
+          <div className="card kpi clickable" key={k.label} onClick={() => navigate(k.to)} title={`Go to ${k.to === '/pts' ? 'PTS' : 'Onboarding'}`}>
             <div className="kpi-value">{k.value}</div>
             <div className="kpi-label">{k.label}</div>
           </div>

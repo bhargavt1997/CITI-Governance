@@ -173,7 +173,7 @@ body { margin: 0; background: var(--bg); }
 .charts { grid-template-columns: 1fr 1fr; margin-bottom: 18px; }
 @media (max-width: 1000px) { .charts { grid-template-columns: 1fr; } }
 
-.kpi { position: relative; overflow: hidden; padding: 20px 22px; transition: transform 0.16s, box-shadow 0.16s, border-color 0.16s; }
+.kpi { position: relative; overflow: hidden; padding: 20px 22px; cursor: pointer; transition: transform 0.16s, box-shadow 0.16s, border-color 0.16s; }
 .kpi:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: #d7dfee; }
 .kpi .kpi-value { font-size: 32px; font-weight: 800; letter-spacing: -1px; color: var(--navy-800); line-height: 1.1; }
 .kpi .kpi-label { font-size: 12px; color: var(--muted); margin-top: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
