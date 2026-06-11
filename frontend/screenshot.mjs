@@ -27,7 +27,7 @@ await page.waitForTimeout(500)
 await page.screenshot({ path: '/tmp/ui-pts-approvals.png', fullPage: true })
 
 await page.click('a[href="/onboarding"]')
-await page.waitForSelector('.kanban')
+await page.waitForSelector('.lanes')
 await page.waitForTimeout(500)
 await page.screenshot({ path: '/tmp/ui-onboarding.png', fullPage: true })
 

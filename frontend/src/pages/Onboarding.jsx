@@ -53,8 +53,17 @@ export default function Onboarding() {
   const [dropStage, setDropStage] = useState(null)
 
   // The onboarding pipeline is for candidates being onboarded — managers are not part of it.
+  // Scope: senior managers see everyone; regular managers see their reportees; developers see only themselves.
   const load = () => api.candidates()
-    .then((cs) => setCandidates(cs.filter((c) => c.role !== 'MANAGER')))
+    .then((cs) => {
+      const devs = cs.filter((c) => c.role !== 'MANAGER')
+      const scoped = isSeniorManager
+        ? devs
+        : isManager
+          ? devs.filter((c) => c.reportingManager === user.name)
+          : devs.filter((c) => c.id === user.candidateId)
+      setCandidates(scoped)
+    })
     .catch((e) => setError(e.message))
   useEffect(() => { load() }, [])
 
@@ -88,8 +97,8 @@ export default function Onboarding() {
       <h1 className="page-title">Onboarding Pipeline</h1>
       <p className="page-sub">
         {isManager
-          ? 'Each column is a stage. Drag a candidate card to a new column to update their stage, or click a card to open the full profile.'
-          : 'Each column is a stage in the onboarding journey. Click a card to open the full profile.'}
+          ? 'Each row is a stage. Drag a candidate into another stage to update it, or click a card to open the full profile.'
+          : 'Each row is a stage in the onboarding journey. Click a card to open the full profile.'}
       </p>
 
       {error && <div className="error-banner">{error}</div>}
@@ -106,23 +115,23 @@ export default function Onboarding() {
         {isManager && <button className="btn" onClick={() => setShowAdd(true)}>+ Nominate Candidate</button>}
       </div>
 
-      <div className="kanban">
+      <div className="lanes">
         {STAGES.map((s) => {
           const cards = byStage(s)
           const done = s === 'ONBOARDED'
           return (
             <div
               key={s}
-              className={`kan-col ${done ? 'done' : ''} ${dropStage === s ? 'drop' : ''}`}
+              className={`lane ${done ? 'done' : ''} ${dropStage === s ? 'drop' : ''}`}
               onDragOver={isManager ? (e) => { e.preventDefault(); if (dropStage !== s) setDropStage(s) } : undefined}
               onDragLeave={isManager ? () => setDropStage((p) => (p === s ? null : p)) : undefined}
               onDrop={isManager ? () => onDrop(s) : undefined}
             >
-              <div className="kan-col-head">
-                <span className="kan-col-title">{STAGE_LABELS[s]}</span>
+              <div className="lane-head">
+                <span className="lane-title">{STAGE_LABELS[s]}</span>
                 <span className="kan-count">{cards.length}</span>
               </div>
-              <div className="kan-cards">
+              <div className="lane-cards">
                 {cards.map((c) => (
                   <div
                     key={c.id}
@@ -145,7 +154,7 @@ export default function Onboarding() {
                     </div>
                   </div>
                 ))}
-                {cards.length === 0 && <div className="kan-empty">No candidates</div>}
+                {cards.length === 0 && <div className="kan-empty">No candidates in this stage</div>}
               </div>
             </div>
           )

@@ -140,7 +140,7 @@ function UserMenu() {
 }
 
 function Shell() {
-  const { user, isSeniorManager, roleLabel } = useAuth()
+  const { user, isManager, isSeniorManager, roleLabel } = useAuth()
   return (
     <div className="app">
       <aside className="sidebar">
@@ -152,7 +152,7 @@ function Shell() {
           <NavLink to="/" end>Dashboard</NavLink>
           <NavLink to="/pts">PTS — Timesheet</NavLink>
           <NavLink to="/onboarding">Onboarding</NavLink>
-          <NavLink to="/profiles">Profiles</NavLink>
+          {isManager && <NavLink to="/profiles">Profiles</NavLink>}
           <NavLink to="/training">Training</NavLink>
           <NavLink to="/karat">KARAT Assessment</NavLink>
           {isSeniorManager && <NavLink to="/people">All People</NavLink>}
