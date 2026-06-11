@@ -33,7 +33,7 @@ export default function ProfileDetail() {
 
   const load = () => {
     Promise.all([api.candidate(id), api.candidateEnrollments(id)])
-      .then(([cand, enr]) => { setC(cand); setEnrollments(enr); setLabel(`/profiles/${id}`, cand.name) })
+      .then(([cand, enr]) => { setC(cand); setEnrollments(enr); setLabel(`/profiles/${id}`, cand.name.split(' ')[0]) })
       .catch((e) => setError(e.message))
   }
   useEffect(() => { load() }, [id])

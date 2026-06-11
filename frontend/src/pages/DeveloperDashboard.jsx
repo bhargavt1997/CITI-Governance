@@ -77,14 +77,16 @@ export default function DeveloperDashboard() {
         <h3>My Onboarding Journey</h3>
         <div className="journey">
           {JOURNEY.map((s, i) => {
-            const state = failed && i === curIdx ? 'failed'
-              : i < curIdx ? 'done'
-              : i === curIdx ? 'current'
+            const state = i < curIdx ? 'done'
+              : i === curIdx ? (failed ? 'done' : 'current')
               : 'upcoming'
+            // KARAT was scheduled (and attended) but failed — the break is on the path to the next step.
+            const showBreak = failed && i === curIdx
             return (
-              <div className={`jstep ${state}`} key={s}>
-                <div className="jdot">{state === 'done' ? '✓' : state === 'failed' ? '✕' : i + 1}</div>
+              <div className={`jstep ${state} ${showBreak ? 'break' : ''}`} key={s}>
+                <div className="jdot">{state === 'done' ? '✓' : i + 1}</div>
                 <div className="jlabel">{STAGE_LABELS[s]}</div>
+                {showBreak && <span className="jbreak" title="Failed the KARAT assessment">✕</span>}
               </div>
             )
           })}

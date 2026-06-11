@@ -189,12 +189,11 @@ function RequireAuth() {
   return <Shell />
 }
 
-/** The login screen; if already authenticated, bounces to the originally requested page (or the dashboard). */
+/** The login screen; once authenticated, everyone lands on the dashboard. */
 function LoginRoute() {
   const { user, booting } = useAuth()
-  const loc = useLocation()
   if (booting) return <Booting />
-  if (user) return <Navigate to={loc.state?.from || '/'} replace />
+  if (user) return <Navigate to="/" replace />
   return <Login />
 }
 
