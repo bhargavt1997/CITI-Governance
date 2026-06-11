@@ -17,9 +17,14 @@ await page.waitForTimeout(800)
 await page.screenshot({ path: '/tmp/ui-dashboard.png', fullPage: true })
 
 await page.click('a[href="/pts"]')
-await page.waitForSelector('table')
+await page.waitForSelector('.ts-own')
 await page.waitForTimeout(500)
-await page.screenshot({ path: '/tmp/ui-pts.png', fullPage: true })
+await page.screenshot({ path: '/tmp/ui-pts-mine.png', fullPage: true })
+
+// Approvals tab (manager only)
+await page.click('.tab:nth-child(2)')
+await page.waitForTimeout(500)
+await page.screenshot({ path: '/tmp/ui-pts-approvals.png', fullPage: true })
 
 await page.click('a[href="/onboarding"]')
 await page.waitForSelector('table')

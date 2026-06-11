@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, STAGES, STAGE_LABELS } from '../api'
+import { api, STAGES, STAGE_LABELS, DEVELOPER_BANDS, bandLabel } from '../api'
 import { useAuth } from '../auth'
 
 function Stepper({ stage }) {
@@ -17,7 +17,7 @@ function Stepper({ stage }) {
 }
 
 function AddCandidateModal({ onClose, onCreated, leadName }) {
-  const [form, setForm] = useState({ name: '', email: '', band: 'C', wave: 'Wave 3', pod: '', reportingManager: leadName })
+  const [form, setForm] = useState({ name: '', email: '', band: 'b5l', wave: 'Wave 3', pod: '', reportingManager: leadName })
   const [err, setErr] = useState(null)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
@@ -38,7 +38,7 @@ function AddCandidateModal({ onClose, onCreated, leadName }) {
         <div className="form-row"><label>Email *</label><input type="text" value={form.email} onChange={set('email')} /></div>
         <div className="form-row"><label>Band</label>
           <select value={form.band} onChange={set('band')}>
-            <option>A</option><option>B</option><option>C</option><option>D</option>
+            {DEVELOPER_BANDS.map((b) => <option key={b} value={b}>{bandLabel(b)}</option>)}
           </select>
         </div>
         <div className="form-row"><label>Wave</label><input type="text" value={form.wave} onChange={set('wave')} /></div>
@@ -54,7 +54,7 @@ function AddCandidateModal({ onClose, onCreated, leadName }) {
 }
 
 export default function Onboarding() {
-  const { user, isLead } = useAuth()
+  const { user, isManager } = useAuth()
   const [candidates, setCandidates] = useState([])
   const [expanded, setExpanded] = useState(null)
   const [history, setHistory] = useState({})
@@ -76,15 +76,14 @@ export default function Onboarding() {
     }
   }
 
-  const advance = async (c) => {
-    const nextIdx = STAGES.indexOf(c.currentStage) + 1
-    const nextLabel = STAGE_LABELS[STAGES[nextIdx]]
-    if (!confirm(`Move ${c.name} to "${nextLabel}"?`)) return
+  const changeStage = async (c, stage) => {
+    if (stage === c.currentStage) return
+    if (!confirm(`Change ${c.name}'s stage to "${STAGE_LABELS[stage]}"?`)) return
     try {
-      await api.advanceStage(c.id)
+      await api.setStage(c.id, stage)
       setHistory((m) => ({ ...m, [c.id]: undefined }))
       load()
-      setToast(`${c.name} → ${nextLabel} ✓`)
+      setToast(`${c.name} → ${STAGE_LABELS[stage]} ✓`)
       setTimeout(() => setToast(null), 2500)
     } catch (e) {
       setToast(e.message)
@@ -97,7 +96,7 @@ export default function Onboarding() {
       <h1 className="page-title">Onboarding Pipeline</h1>
       <p className="page-sub">
         Track every candidate from nomination to onboarded. Click a row to expand the stage pipeline;
-        leads can complete the current step to advance.
+        managers can set a candidate to any stage.
       </p>
 
       {error && <div className="error-banner">{error}</div>}
@@ -106,7 +105,7 @@ export default function Onboarding() {
         <span className="badge blue">{candidates.length} candidates</span>
         <span className="badge green">{candidates.filter((c) => c.currentStage === 'ONBOARDED').length} onboarded</span>
         <div className="spacer" />
-        {isLead && <button className="btn" onClick={() => setShowAdd(true)}>+ Nominate Candidate</button>}
+        {isManager && <button className="btn" onClick={() => setShowAdd(true)}>+ Nominate Candidate</button>}
       </div>
 
       <div className="card" style={{ padding: 0 }}>
@@ -122,9 +121,9 @@ export default function Onboarding() {
                 key={c.id} c={c}
                 expanded={expanded === c.id}
                 history={history[c.id]}
-                canAdvance={isLead}
+                canManage={isManager}
                 onToggle={() => toggle(c.id)}
-                onAdvance={() => advance(c)}
+                onSetStage={(stage) => changeStage(c, stage)}
               />
             ))}
           </tbody>
@@ -144,14 +143,14 @@ export default function Onboarding() {
   )
 }
 
-function FragmentRow({ c, expanded, history, canAdvance, onToggle, onAdvance }) {
+function FragmentRow({ c, expanded, history, canManage, onToggle, onSetStage }) {
   const isDone = c.currentStage === 'ONBOARDED'
   return (
     <>
       <tr className="clickable" onClick={onToggle}>
         <td><strong>{c.name}</strong><div style={{ fontSize: 11, color: 'var(--muted)' }}>{c.email}</div></td>
         <td>{c.employeeId || '—'}</td>
-        <td>{c.band || '—'}</td>
+        <td>{c.band ? bandLabel(c.band) : '—'}</td>
         <td>{c.wave || '—'}</td>
         <td>{c.pod || '—'}</td>
         <td><span className={`badge ${isDone ? 'green' : 'blue'}`}>{STAGE_LABELS[c.currentStage]}</span></td>
@@ -161,15 +160,18 @@ function FragmentRow({ c, expanded, history, canAdvance, onToggle, onAdvance }) 
         <tr>
           <td colSpan={7} style={{ background: '#fafbfe' }}>
             <Stepper stage={c.currentStage} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 4px 4px' }}>
-              {!isDone && canAdvance && (
-                <button className="btn small" onClick={(e) => { e.stopPropagation(); onAdvance() }}>
-                  Complete current step → {STAGE_LABELS[STAGES[STAGES.indexOf(c.currentStage) + 1]]}
-                </button>
-              )}
+            <div className="ob-controls" onClick={(e) => e.stopPropagation()}>
               {isDone && <span className="badge green">Fully onboarded {c.joinDate ? `· joined ${c.joinDate}` : ''}</span>}
+              {canManage && (
+                <label className="ob-stage-set">
+                  <span>Set stage</span>
+                  <select value={c.currentStage} onChange={(e) => onSetStage(e.target.value)}>
+                    {STAGES.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
+                  </select>
+                </label>
+              )}
               {history && history.length > 0 && (
-                <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                <span className="ob-lastupd">
                   Last update: {STAGE_LABELS[history[history.length - 1].stage]} by {history[history.length - 1].completedBy}
                   {' on '}{new Date(history[history.length - 1].completedAt).toLocaleDateString()}
                 </span>

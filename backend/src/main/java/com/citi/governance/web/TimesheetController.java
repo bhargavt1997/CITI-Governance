@@ -49,7 +49,8 @@ public class TimesheetController {
     @PostMapping
     public Timesheet save(@RequestBody Map<String, Object> body, HttpServletRequest req) {
         Long candidateId = ((Number) body.get("candidateId")).longValue();
-        auth.requireLeadOrSelf(req, candidateId);
+        // You fill only your own timesheet — managers approve their reports, they do not fill them.
+        auth.requireSelf(req, candidateId);
         String month = (String) body.get("month");
         if (month == null || !month.matches("\\d{4}-\\d{2}")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "month must be yyyy-MM");
@@ -77,15 +78,21 @@ public class TimesheetController {
         return timesheets.save(t);
     }
 
-    /** Manager decision on a submitted timesheet. Leads only. */
+    /** Manager decision on a submitted timesheet — only for the manager's own direct reports. */
     @PostMapping("/{id}/decision")
     public Timesheet decide(@PathVariable Long id, @RequestBody Map<String, Object> body, HttpServletRequest req) {
-        AppUser lead = auth.requireLead(req);
+        AppUser manager = auth.requireManager(req);
         Timesheet t = timesheets.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Timesheet not found"));
+        Candidate owner = t.getCandidate();
+        if (owner.getReportingManager() == null
+                || !owner.getReportingManager().equalsIgnoreCase(manager.getName())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "You can only approve timesheets for your direct reports");
+        }
         boolean approved = Boolean.TRUE.equals(body.get("approved"));
         t.setStatus(approved ? TimesheetStatus.APPROVED : TimesheetStatus.REJECTED);
-        t.setApprovedBy(lead.getName());
+        t.setApprovedBy(manager.getName());
         t.setApprovedAt(LocalDateTime.now());
         return timesheets.save(t);
     }

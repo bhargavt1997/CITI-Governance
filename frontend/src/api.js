@@ -25,6 +25,8 @@ async function request(path, options = {}) {
 export const api = {
   // Auth
   login: (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  register: (data) => request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+  publicManagers: () => request('/auth/managers'),
   logout: () => request('/auth/logout', { method: 'POST' }),
   me: () => request('/auth/me'),
 
@@ -40,6 +42,8 @@ export const api = {
   updateSkills: (id, skills) => request(`/candidates/${id}/skills`, { method: 'PUT', body: JSON.stringify(skills) }),
   advanceStage: (id, notes) =>
     request(`/candidates/${id}/advance-stage`, { method: 'POST', body: JSON.stringify({ notes }) }),
+  setStage: (id, stage, notes) =>
+    request(`/candidates/${id}/stage`, { method: 'POST', body: JSON.stringify({ stage, notes }) }),
   stageHistory: (id) => request(`/candidates/${id}/stage-history`),
   candidateEnrollments: (id) => request(`/candidates/${id}/enrollments`),
 
@@ -53,7 +57,7 @@ export const api = {
     request(`/timesheets/${id}/decision`, { method: 'POST', body: JSON.stringify({ approved }) }),
 
   // Users
-  leads: () => request('/users/leads'),
+  managers: () => request('/users/managers'),
 
   // Trainings
   trainings: () => request('/trainings'),
@@ -63,6 +67,13 @@ export const api = {
     request(`/trainings/${trainingId}/enroll`, { method: 'POST', body: JSON.stringify({ candidateId }) }),
   updateEnrollment: (id, data) => request(`/enrollments/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 }
+
+// Career bands. Stored lowercase; displayed uppercase (use bandLabel). Manager-eligible vs developer bands
+// form a clean split.
+export const ALL_BANDS = ['b8', 'b7', 'b6l', 'b6h', 'b5l', 'b5h', 'b4l', 'b4h']
+export const MANAGER_BANDS = ['b6h', 'b5l', 'b5h', 'b4l', 'b4h']
+export const DEVELOPER_BANDS = ['b8', 'b7', 'b6l']
+export const bandLabel = (b) => (b ? String(b).toUpperCase() : '')
 
 export const STAGES = [
   'NOMINATED',

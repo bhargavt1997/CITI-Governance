@@ -23,9 +23,11 @@ public class AuthFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        // Only the API is protected; login is open; CORS preflights pass through.
+        // Only the API is protected; login/registration are open; CORS preflights pass through.
         if (!path.startsWith("/api/")) return true;
         if (path.startsWith("/api/auth/login")) return true;
+        if (path.startsWith("/api/auth/register")) return true;
+        if (path.startsWith("/api/auth/managers")) return true;
         return "OPTIONS".equalsIgnoreCase(request.getMethod());
     }
 

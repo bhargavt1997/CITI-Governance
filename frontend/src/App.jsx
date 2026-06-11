@@ -149,14 +149,14 @@ export default function App() {
           <span>Citi Governance</span>
         </div>
         <nav>
-          <NavLink to="/" end><span className="nav-ico">▦</span> Dashboard</NavLink>
-          <NavLink to="/pts"><span className="nav-ico">◷</span> PTS — Timesheet</NavLink>
-          <NavLink to="/onboarding"><span className="nav-ico">⇶</span> Onboarding</NavLink>
-          <NavLink to="/profiles"><span className="nav-ico">◉</span> Profiles</NavLink>
-          <NavLink to="/training"><span className="nav-ico">✦</span> Training</NavLink>
+          <NavLink to="/" end>Dashboard</NavLink>
+          <NavLink to="/pts">PTS — Timesheet</NavLink>
+          <NavLink to="/onboarding">Onboarding</NavLink>
+          <NavLink to="/profiles">Profiles</NavLink>
+          <NavLink to="/training">Training</NavLink>
         </nav>
         <div className="sidebar-foot">
-          Signed in as <strong>{user.name.split(' ')[0]}</strong> · {user.role === 'LEAD' ? 'Lead' : 'Developer'}
+          Signed in as <strong>{user.name.split(' ')[0]}</strong> · {user.role === 'MANAGER' ? 'Manager' : 'Developer'}
         </div>
       </aside>
       <div className="main">

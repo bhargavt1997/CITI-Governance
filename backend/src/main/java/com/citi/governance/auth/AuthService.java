@@ -66,18 +66,25 @@ public class AuthService {
         return u;
     }
 
-    public AppUser requireLead(HttpServletRequest request) {
+    public AppUser requireManager(HttpServletRequest request) {
         AppUser u = current(request);
-        if (u.getRole() != Role.LEAD) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Lead role required");
+        if (u.getRole() != Role.MANAGER) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Manager role required");
         }
         return u;
     }
 
-    /** Leads may act on anyone; developers only on their own candidate record. */
-    public AppUser requireLeadOrSelf(HttpServletRequest request, Long candidateId) {
+    /** Only the owner of a candidate record — used for actions nobody else may perform on your behalf (e.g. filling your own PTS). */
+    public AppUser requireSelf(HttpServletRequest request, Long candidateId) {
         AppUser u = current(request);
-        if (u.getRole() == Role.LEAD) return u;
+        if (u.getCandidateId() != null && u.getCandidateId().equals(candidateId)) return u;
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only fill your own timesheet");
+    }
+
+    /** Managers may act on anyone; developers only on their own candidate record. */
+    public AppUser requireManagerOrSelf(HttpServletRequest request, Long candidateId) {
+        AppUser u = current(request);
+        if (u.getRole() == Role.MANAGER) return u;
         if (u.getCandidateId() != null && u.getCandidateId().equals(candidateId)) return u;
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only modify your own record");
     }

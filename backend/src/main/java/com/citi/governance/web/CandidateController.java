@@ -43,7 +43,7 @@ public class CandidateController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Candidate create(@RequestBody Candidate c, HttpServletRequest req) {
-        AppUser lead = auth.requireLead(req);
+        AppUser manager = auth.requireManager(req);
         c.setId(null);
         if (c.getCurrentStage() == null) {
             c.setCurrentStage(OnboardingStage.NOMINATED);
@@ -52,7 +52,7 @@ public class CandidateController {
         StageHistory h = new StageHistory();
         h.setCandidate(saved);
         h.setStage(OnboardingStage.NOMINATED);
-        h.setCompletedBy(lead.getName());
+        h.setCompletedBy(manager.getName());
         h.setNotes("Candidate nominated");
         history.save(h);
         return saved;
@@ -60,7 +60,7 @@ public class CandidateController {
 
     @PutMapping("/{id}")
     public Candidate update(@PathVariable Long id, @RequestBody Candidate in, HttpServletRequest req) {
-        auth.requireLeadOrSelf(req, id);
+        auth.requireManagerOrSelf(req, id);
         Candidate c = get(id);
         if (in.getName() != null) c.setName(in.getName());
         if (in.getEmployeeId() != null) c.setEmployeeId(in.getEmployeeId());
@@ -80,7 +80,7 @@ public class CandidateController {
     /** SOEID can be set once if missing at registration; afterwards it is locked. */
     @PostMapping("/{id}/soeid")
     public Candidate setSoeid(@PathVariable Long id, @RequestBody Map<String, String> body, HttpServletRequest req) {
-        auth.requireLeadOrSelf(req, id);
+        auth.requireManagerOrSelf(req, id);
         Candidate c = get(id);
         if (c.getSoeid() != null && !c.getSoeid().isBlank()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "SOEID already set and cannot be changed");
@@ -95,7 +95,7 @@ public class CandidateController {
 
     @PutMapping("/{id}/skills")
     public Candidate updateSkills(@PathVariable Long id, @RequestBody Map<String, Integer> body, HttpServletRequest req) {
-        auth.requireLeadOrSelf(req, id);
+        auth.requireManagerOrSelf(req, id);
         Candidate c = get(id);
         if (body.containsKey("technical")) c.setSkillTechnical(clamp(body.get("technical")));
         if (body.containsKey("functional")) c.setSkillFunctional(clamp(body.get("functional")));
@@ -113,7 +113,7 @@ public class CandidateController {
     @PostMapping("/{id}/advance-stage")
     public Candidate advanceStage(@PathVariable Long id, @RequestBody(required = false) Map<String, String> body,
                                   HttpServletRequest req) {
-        AppUser lead = auth.requireLead(req);
+        AppUser manager = auth.requireManager(req);
         Candidate c = get(id);
         OnboardingStage current = c.getCurrentStage();
         if (current == OnboardingStage.ONBOARDED) {
@@ -126,8 +126,41 @@ public class CandidateController {
         StageHistory h = new StageHistory();
         h.setCandidate(c);
         h.setStage(next);
-        h.setCompletedBy(lead.getName());
+        h.setCompletedBy(manager.getName());
         h.setNotes(body != null ? body.get("notes") : null);
+        history.save(h);
+        return c;
+    }
+
+    /** Set the candidate to any onboarding stage and record it in the audit trail. Managers only. */
+    @PostMapping("/{id}/stage")
+    public Candidate setStage(@PathVariable Long id, @RequestBody Map<String, String> body, HttpServletRequest req) {
+        AppUser manager = auth.requireManager(req);
+        Candidate c = get(id);
+        String raw = body.get("stage");
+        if (raw == null || raw.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "stage is required");
+        }
+        OnboardingStage target;
+        try {
+            target = OnboardingStage.valueOf(raw);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown stage: " + raw);
+        }
+        if (c.getCurrentStage() == target) {
+            return c; // no change
+        }
+        c.setCurrentStage(target);
+        if (target == OnboardingStage.ONBOARDED && c.getJoinDate() == null) {
+            c.setJoinDate(java.time.LocalDate.now());
+        }
+        candidates.save(c);
+
+        StageHistory h = new StageHistory();
+        h.setCandidate(c);
+        h.setStage(target);
+        h.setCompletedBy(manager.getName());
+        h.setNotes(body.get("notes"));
         history.save(h);
         return c;
     }
@@ -140,7 +173,7 @@ public class CandidateController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id, HttpServletRequest req) {
-        auth.requireLead(req);
+        auth.requireManager(req);
         candidates.deleteById(id);
     }
 }

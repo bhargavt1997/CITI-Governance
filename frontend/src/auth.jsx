@@ -35,6 +35,14 @@ export function AuthProvider({ children }) {
     return u
   }
 
+  const register = async (data) => {
+    const { token, user: u } = await api.register(data)
+    localStorage.setItem('cg_token', token)
+    localStorage.setItem('cg_user', JSON.stringify(u))
+    setUser(u)
+    return u
+  }
+
   const logout = async () => {
     try { await api.logout() } catch { /* token may already be gone */ }
     localStorage.removeItem('cg_token')
@@ -42,10 +50,10 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
-  const isLead = user?.role === 'LEAD'
+  const isManager = user?.role === 'MANAGER'
 
   return (
-    <AuthContext.Provider value={{ user, isLead, booting, login, logout }}>
+    <AuthContext.Provider value={{ user, isManager, booting, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   )

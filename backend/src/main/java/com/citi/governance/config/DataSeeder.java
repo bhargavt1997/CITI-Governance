@@ -6,10 +6,12 @@ import com.citi.governance.repo.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Configuration
 public class DataSeeder {
@@ -20,44 +22,133 @@ public class DataSeeder {
     CommandLineRunner seed(CandidateRepository candidates, StageHistoryRepository history,
                            TimesheetRepository timesheets, TrainingRepository trainings,
                            EnrollmentRepository enrollments, AppUserRepository users,
-                           AuthService auth) {
+                           AuthService auth, JdbcTemplate jdbc) {
         return args -> {
+            // The LEAD role was renamed to MANAGER — migrate any pre-existing rows before they are mapped.
+            migrateLeadRole(jdbc);
+            // Move legacy A/B/C/D bands onto the new band scheme (b4l..b8); b6h+ are manager-only.
+            migrateBands(jdbc);
             if (candidates.count() == 0) {
                 seedGovernanceData(candidates, history, timesheets, trainings, enrollments);
             }
-            if (users.count() == 0) {
-                seedUsers(users, candidates, auth);
-            }
+            // Accounts are ensured idempotently every boot so they survive reseeds and new entries can be added.
+            ensureManagerAccounts(users, auth);
+            ensureDeveloperAccounts(users, candidates, auth);
+            // Managers fill their own PTS, so each manager needs a linked candidate record.
+            ensureManagerProfiles(users, candidates);
         };
     }
 
-    /**
-     * Default password for all seeded accounts is "Citi@123".
-     * Leads: suresh.iyer@deloitte.com, anita.desai@deloitte.com.
-     * Every candidate gets a developer login under their own email.
-     */
-    private void seedUsers(AppUserRepository users, CandidateRepository candidates, AuthService auth) {
-        String defaultHash = auth.hash("Citi@123");
+    private static final String DEFAULT_PASSWORD = "Citi@123";
+    private static final String DEFAULT_MANAGER_BAND = com.citi.governance.model.Bands.DEFAULT_MANAGER;
 
-        for (String[] lead : new String[][]{
-                {"Suresh Iyer", "suresh.iyer@deloitte.com"},
-                {"Anita Desai", "anita.desai@deloitte.com"}}) {
-            AppUser u = new AppUser();
-            u.setName(lead[0]);
-            u.setEmail(lead[1]);
-            u.setPasswordHash(defaultHash);
-            u.setRole(Role.LEAD);
-            users.save(u);
+    /** Manager accounts (name, email). All share the default password. */
+    private static final String[][] MANAGERS = {
+            {"Suresh Iyer", "suresh.iyer@deloitte.com"},
+            {"Anita Desai", "anita.desai@deloitte.com"},
+            {"Bhargav T", "tsbhargav@deloitte.com"},
+    };
+
+    /**
+     * "LEAD" → "MANAGER" for any data seeded before the rename. Idempotent.
+     * Hibernate's ddl-auto=update never rewrites the enum CHECK constraint it generated for the old
+     * values, so we drop the stale role check constraints first; Hibernate re-creates them (with the
+     * current enum values) on the next boot if needed.
+     */
+    private void migrateLeadRole(JdbcTemplate jdbc) {
+        jdbc.execute("ALTER TABLE app_users DROP CONSTRAINT IF EXISTS app_users_role_check");
+        jdbc.execute("ALTER TABLE candidates DROP CONSTRAINT IF EXISTS candidates_role_check");
+        jdbc.update("UPDATE app_users SET role = 'MANAGER' WHERE role = 'LEAD'");
+        jdbc.update("UPDATE candidates SET role = 'MANAGER' WHERE role = 'LEAD'");
+    }
+
+    /**
+     * Map legacy A/B/C/D bands onto the new scheme (b4l..b8) and keep managers on a manager band.
+     * Idempotent — once migrated, values are already b*, so the CASE leaves them untouched.
+     */
+    private void migrateBands(JdbcTemplate jdbc) {
+        // Managers must hold a manager-eligible band (b6h, b5l, b5h, b4l, b4h).
+        jdbc.update("UPDATE candidates SET band = '" + DEFAULT_MANAGER_BAND
+                + "' WHERE role = 'MANAGER' AND (band IS NULL OR band NOT IN ('b6h','b5l','b5h','b4l','b4h'))");
+        // Developers must hold a developer band (b8, b7, b6l). Map legacy A/B/C/D and manager bands across.
+        jdbc.update("UPDATE candidates SET band = CASE "
+                + "WHEN band IN ('b8','b7','b6l') THEN band "
+                + "WHEN band IN ('A','b6h','b5h') THEN 'b7' "
+                + "ELSE 'b6l' END WHERE role = 'DEVELOPER'");
+    }
+
+    /** Create any missing manager account (default password). Idempotent. */
+    private void ensureManagerAccounts(AppUserRepository users, AuthService auth) {
+        for (String[] m : MANAGERS) {
+            if (users.findByEmailIgnoreCase(m[1]).isEmpty()) {
+                AppUser u = new AppUser();
+                u.setName(m[0]);
+                u.setEmail(m[1]);
+                u.setPasswordHash(auth.hash(DEFAULT_PASSWORD));
+                u.setRole(Role.MANAGER);
+                users.save(u);
+            }
+        }
+    }
+
+    /** Give every non-manager candidate a developer login under their own email (default password). Idempotent. */
+    private void ensureDeveloperAccounts(AppUserRepository users, CandidateRepository candidates, AuthService auth) {
+        for (Candidate c : candidates.findAll()) {
+            if (c.getRole() == Role.MANAGER) continue;
+            if (users.findByEmailIgnoreCase(c.getEmail()).isEmpty()) {
+                AppUser u = new AppUser();
+                u.setName(c.getName());
+                u.setEmail(c.getEmail());
+                u.setPasswordHash(auth.hash(DEFAULT_PASSWORD));
+                u.setRole(Role.DEVELOPER);
+                u.setCandidateId(c.getId());
+                users.save(u);
+            }
+        }
+    }
+
+    /**
+     * Give every manager account a candidate record (so they can fill their own PTS) and cross-link
+     * reporting lines between managers, so each manager's own timesheet is approved by a peer.
+     * Idempotent — safe to run on every boot.
+     */
+    private void ensureManagerProfiles(AppUserRepository users, CandidateRepository candidates) {
+        List<AppUser> managers = users.findAll().stream()
+                .filter(u -> u.getRole() == Role.MANAGER)
+                .toList();
+
+        int idx = 0;
+        for (AppUser m : managers) {
+            if (m.getCandidateId() != null) { idx++; continue; }
+            Candidate c = candidates.findByEmail(m.getEmail()).orElseGet(() -> new Candidate());
+            c.setName(m.getName());
+            c.setEmail(m.getEmail());
+            c.setRole(Role.MANAGER);
+            c.setCurrentStage(OnboardingStage.ONBOARDED);
+            if (c.getBand() == null) c.setBand(DEFAULT_MANAGER_BAND);
+            if (c.getWave() == null) c.setWave("—");
+            if (c.getPod() == null) c.setPod("Leadership");
+            if (c.getLocation() == null) c.setLocation("Hyderabad");
+            if (c.getEmployeeId() == null) c.setEmployeeId("MGR" + (1010 + idx));
+            if (c.getJoinDate() == null) c.setJoinDate(LocalDate.now().minusMonths(10).withDayOfMonth(1));
+            Candidate saved = candidates.save(c);
+            m.setCandidateId(saved.getId());
+            users.save(m);
+            idx++;
         }
 
-        for (Candidate c : candidates.findAll()) {
-            AppUser u = new AppUser();
-            u.setName(c.getName());
-            u.setEmail(c.getEmail());
-            u.setPasswordHash(defaultHash);
-            u.setRole(Role.DEVELOPER);
-            u.setCandidateId(c.getId());
-            users.save(u);
+        // Cross-link reporting managers so each manager's PTS is approved by another manager.
+        if (managers.size() >= 2) {
+            for (int i = 0; i < managers.size(); i++) {
+                AppUser m = managers.get(i);
+                AppUser peer = managers.get((i + 1) % managers.size());
+                candidates.findById(m.getCandidateId()).ifPresent(c -> {
+                    if (c.getReportingManager() == null || c.getReportingManager().isBlank()) {
+                        c.setReportingManager(peer.getName());
+                        candidates.save(c);
+                    }
+                });
+            }
         }
     }
 
@@ -68,16 +159,16 @@ public class DataSeeder {
 
             String[][] people = {
                 // name, email, soeid, band, wave, pod, location, manager, stage, monthsAgoNominated
-                {"Arjun Mehta",    "arjun.mehta@deloitte.com",    "AM93211", "C", "Wave 1", "Payments",   "Hyderabad", "Suresh Iyer",  "ONBOARDED",               "5"},
-                {"Priya Sharma",   "priya.sharma@deloitte.com",   "PS84102", "C", "Wave 1", "Payments",   "Bengaluru", "Suresh Iyer",  "ONBOARDED",               "5"},
-                {"Rahul Verma",    "rahul.verma@deloitte.com",    "RV77345", "B", "Wave 1", "Cards",      "Pune",      "Anita Desai",  "ONBOARDED",               "4"},
-                {"Sneha Reddy",    "sneha.reddy@deloitte.com",    "SR66120", "C", "Wave 2", "Cards",      "Hyderabad", "Anita Desai",  "VDI_SETUP_IN_PROGRESS",   "3"},
-                {"Vikram Nair",    "vikram.nair@deloitte.com",    "VN55980", "B", "Wave 2", "Risk",       "Chennai",   "Suresh Iyer",  "CITI_CLEARANCE_RECEIVED", "3"},
-                {"Divya Krishnan", "divya.krishnan@deloitte.com", "DK44871", "C", "Wave 2", "Risk",       "Bengaluru", "Anita Desai",  "ONBOARDING_INITIATED",    "2"},
-                {"Karthik Rao",    "karthik.rao@deloitte.com",    "",        "C", "Wave 3", "Payments",   "Hyderabad", "Suresh Iyer",  "FINAL_SELECTION",         "2"},
-                {"Ananya Gupta",   "ananya.gupta@deloitte.com",   "",        "D", "Wave 3", "Cards",      "Mumbai",    "Anita Desai",  "CLIENT_INTERVIEW",        "1"},
-                {"Rohan Joshi",    "rohan.joshi@deloitte.com",    "",        "C", "Wave 3", "Risk",       "Pune",      "Suresh Iyer",  "CARAT_INTERVIEW",         "1"},
-                {"Meera Pillai",   "meera.pillai@deloitte.com",   "",        "D", "Wave 3", "Payments",   "Chennai",   "Anita Desai",  "NOMINATED",               "0"},
+                {"Arjun Mehta",    "arjun.mehta@deloitte.com",    "AM93211", "b8",  "Wave 1", "Payments",   "Hyderabad", "Suresh Iyer",  "ONBOARDED",               "5"},
+                {"Priya Sharma",   "priya.sharma@deloitte.com",   "PS84102", "b7",  "Wave 1", "Payments",   "Bengaluru", "Suresh Iyer",  "ONBOARDED",               "5"},
+                {"Rahul Verma",    "rahul.verma@deloitte.com",    "RV77345", "b8",  "Wave 1", "Cards",      "Pune",      "Anita Desai",  "ONBOARDED",               "4"},
+                {"Sneha Reddy",    "sneha.reddy@deloitte.com",    "SR66120", "b7",  "Wave 2", "Cards",      "Hyderabad", "Anita Desai",  "VDI_SETUP_IN_PROGRESS",   "3"},
+                {"Vikram Nair",    "vikram.nair@deloitte.com",    "VN55980", "b6l", "Wave 2", "Risk",       "Chennai",   "Suresh Iyer",  "CITI_CLEARANCE_RECEIVED", "3"},
+                {"Divya Krishnan", "divya.krishnan@deloitte.com", "DK44871", "b7",  "Wave 2", "Risk",       "Bengaluru", "Anita Desai",  "ONBOARDING_INITIATED",    "2"},
+                {"Karthik Rao",    "karthik.rao@deloitte.com",    "",        "b6l", "Wave 3", "Payments",   "Hyderabad", "Suresh Iyer",  "FINAL_SELECTION",         "2"},
+                {"Ananya Gupta",   "ananya.gupta@deloitte.com",   "",        "b6l", "Wave 3", "Cards",      "Mumbai",    "Anita Desai",  "CLIENT_INTERVIEW",        "1"},
+                {"Rohan Joshi",    "rohan.joshi@deloitte.com",    "",        "b7",  "Wave 3", "Risk",       "Pune",      "Suresh Iyer",  "CARAT_INTERVIEW",         "1"},
+                {"Meera Pillai",   "meera.pillai@deloitte.com",   "",        "b6l", "Wave 3", "Payments",   "Chennai",   "Anita Desai",  "NOMINATED",               "0"},
             };
 
             int[][] skills = {

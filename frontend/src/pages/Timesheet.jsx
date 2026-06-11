@@ -2,7 +2,13 @@ import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { useAuth } from '../auth'
 
+const WEEKS = ['week1', 'week2', 'week3', 'week4', 'week5']
 const currentMonth = () => new Date().toISOString().slice(0, 7)
+const monthLabel = (m) => {
+  const [y, mo] = m.split('-')
+  return new Date(Number(y), Number(mo) - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' })
+}
+const sumWeeks = (obj) => WEEKS.reduce((s, wk) => s + (Number(obj?.[wk]) || 0), 0)
 
 function StatusBadge({ sheet }) {
   if (!sheet) return <span className="badge gray">Not filled</span>
@@ -13,96 +19,181 @@ function StatusBadge({ sheet }) {
 }
 
 export default function Timesheet() {
-  const { user, isLead } = useAuth()
+  const { user, isManager } = useAuth()
   const [month, setMonth] = useState(currentMonth())
-  const [candidates, setCandidates] = useState([])
-  const [rows, setRows] = useState({})    // candidateId -> {week1..week5}
-  const [sheets, setSheets] = useState({}) // candidateId -> saved timesheet (id, status, approvedBy)
-  const [dirty, setDirty] = useState({})   // candidateId -> true when edited since load/save
+  const [tab, setTab] = useState('mine')
+  const [ownRow, setOwnRow] = useState({})
+  const [ownSheet, setOwnSheet] = useState(null)
+  const [ownDirty, setOwnDirty] = useState(false)
+  const [reports, setReports] = useState([])
+  const [reportSheets, setReportSheets] = useState({})
   const [toast, setToast] = useState(null)
   const [error, setError] = useState(null)
-  const [soeidDraft, setSoeidDraft] = useState({})
 
   const notify = (msg, ms = 2500) => { setToast(msg); setTimeout(() => setToast(null), ms) }
 
   const load = async (m) => {
     try {
       const [cands, sheetList] = await Promise.all([api.candidates(), api.timesheets({ month: m })])
-      // Developers only see (and fill) their own timesheet row
-      setCandidates(isLead ? cands : cands.filter((c) => c.id === user.candidateId))
-      const weekMap = {}
       const sheetMap = {}
-      for (const t of sheetList) {
-        weekMap[t.candidate.id] = { week1: t.week1, week2: t.week2, week3: t.week3, week4: t.week4, week5: t.week5 }
-        sheetMap[t.candidate.id] = t
+      for (const t of sheetList) sheetMap[t.candidate.id] = t
+
+      const mySheet = sheetMap[user.candidateId] || null
+      setOwnSheet(mySheet)
+      setOwnRow(mySheet ? { ...mySheet } : {})
+      setOwnDirty(false)
+
+      if (isManager) {
+        const reps = cands
+          .filter((c) => c.id !== user.candidateId && c.reportingManager === user.name)
+          .sort((a, b) => a.name.localeCompare(b.name))
+        setReports(reps)
+        const rmap = {}
+        reps.forEach((r) => { if (sheetMap[r.id]) rmap[r.id] = sheetMap[r.id] })
+        setReportSheets(rmap)
       }
-      setRows(weekMap)
-      setSheets(sheetMap)
-      setDirty({})
       setError(null)
     } catch (e) { setError(e.message) }
   }
 
   useEffect(() => { load(month) }, [month])
 
-  const weekVal = (cid, wk) => rows[cid]?.[wk] ?? ''
-  const setWeek = (cid, wk, v) => {
-    setRows((r) => ({ ...r, [cid]: { ...r[cid], [wk]: v === '' ? '' : Number(v) } }))
-    setDirty((d) => ({ ...d, [cid]: true }))
+  const ownTotal = sumWeeks(ownRow)
+  const setWeek = (wk, v) => {
+    setOwnRow((r) => ({ ...r, [wk]: v === '' ? '' : Number(v) }))
+    setOwnDirty(true)
   }
 
-  const totalFor = (cid) => {
-    const r = rows[cid] || {}
-    return ['week1', 'week2', 'week3', 'week4', 'week5']
-      .reduce((sum, wk) => sum + (Number(r[wk]) || 0), 0)
-  }
-
-  const save = async (cid) => {
-    const r = rows[cid] || {}
+  const saveOwn = async () => {
     try {
       const saved = await api.saveTimesheet({
-        candidateId: cid, month,
-        week1: Number(r.week1) || 0, week2: Number(r.week2) || 0, week3: Number(r.week3) || 0,
-        week4: Number(r.week4) || 0, week5: Number(r.week5) || 0,
+        candidateId: user.candidateId, month,
+        week1: Number(ownRow.week1) || 0, week2: Number(ownRow.week2) || 0, week3: Number(ownRow.week3) || 0,
+        week4: Number(ownRow.week4) || 0, week5: Number(ownRow.week5) || 0,
       })
-      setSheets((s) => ({ ...s, [cid]: saved }))
-      setDirty((d) => ({ ...d, [cid]: false }))
+      setOwnSheet(saved)
+      setOwnRow({ ...saved })
+      setOwnDirty(false)
       notify('Timesheet submitted for approval ✓')
     } catch (e) { notify(`Save failed: ${e.message}`, 4000) }
   }
 
   const decide = async (cid, approved) => {
-    const sheet = sheets[cid]
+    const sheet = reportSheets[cid]
     if (!sheet) return
     try {
       const updated = await api.decideTimesheet(sheet.id, approved)
-      setSheets((s) => ({ ...s, [cid]: updated }))
+      setReportSheets((s) => ({ ...s, [cid]: updated }))
       notify(approved ? 'Timesheet approved ✓' : 'Timesheet rejected')
     } catch (e) { notify(e.message, 4000) }
   }
 
-  const addSoeid = async (cid) => {
-    const v = (soeidDraft[cid] || '').trim()
-    if (!v) return
-    try {
-      await api.setSoeid(cid, v)
-      setSoeidDraft((d) => ({ ...d, [cid]: '' }))
-      load(month)
-      notify('SOEID added — it is now locked ✓')
-    } catch (e) { notify(e.message, 4000) }
-  }
+  const pendingCount = reports.filter((r) => {
+    const t = reportSheets[r.id]
+    return t && (!t.status || t.status === 'SUBMITTED')
+  }).length
 
-  const pendingCount = Object.values(sheets)
-    .filter((t) => !t.status || t.status === 'SUBMITTED').length
+  const myTimesheet = (
+    <div className="card ts-own">
+      <div className="ts-own-head">
+        <div>
+          <h3 style={{ margin: 0 }}>My Timesheet</h3>
+          <span className="ts-own-month">{monthLabel(month)}</span>
+        </div>
+        <StatusBadge sheet={ownSheet} />
+      </div>
+
+      <div className="ts-weeks">
+        {WEEKS.map((wk, i) => (
+          <div className="ts-week" key={wk}>
+            <label>Week {i + 1}</label>
+            <input
+              type="number" min="0" max="168" className="num-input"
+              value={ownRow[wk] ?? ''}
+              onChange={(e) => setWeek(wk, e.target.value)}
+            />
+          </div>
+        ))}
+        <div className="ts-week ts-total">
+          <label>Total</label>
+          <div className="ts-total-val">{ownTotal}<span className="ts-hrs">hrs</span></div>
+        </div>
+      </div>
+
+      <div className="ts-own-foot">
+        {ownSheet?.status === 'APPROVED' && !ownDirty && (
+          <span className="ts-note ok">Approved by {ownSheet.approvedBy}</span>
+        )}
+        {ownSheet?.status === 'REJECTED' && !ownDirty && (
+          <span className="ts-note bad">Rejected by {ownSheet.approvedBy} — please revise and resubmit</span>
+        )}
+        {(!ownSheet || ownDirty) && <span className="ts-note">Saving (re)submits the month for your manager's approval.</span>}
+        <button className="btn" disabled={!ownDirty && !!ownSheet} onClick={saveOwn}>
+          {ownSheet ? 'Resubmit' : 'Submit for approval'}
+        </button>
+      </div>
+    </div>
+  )
+
+  const approvals = (
+    <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
+      <table>
+        <thead>
+          <tr>
+            <th>Direct report</th>
+            <th>Week 1</th><th>Week 2</th><th>Week 3</th><th>Week 4</th><th>Week 5</th>
+            <th>Total</th><th>Status</th><th>Decision</th>
+          </tr>
+        </thead>
+        <tbody>
+          {reports.map((r) => {
+            const sheet = reportSheets[r.id]
+            const pending = sheet && (!sheet.status || sheet.status === 'SUBMITTED')
+            return (
+              <tr key={r.id}>
+                <td>
+                  <strong>{r.name}</strong>
+                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>{r.email}</div>
+                </td>
+                {WEEKS.map((wk) => (
+                  <td key={wk} style={{ textAlign: 'right', color: sheet ? 'var(--ink)' : 'var(--faint)' }}>
+                    {sheet ? sheet[wk] : '—'}
+                  </td>
+                ))}
+                <td style={{ textAlign: 'right' }}>
+                  <strong style={{ color: 'var(--blue-dark)' }}>{sheet ? (sheet.total ?? sumWeeks(sheet)) : '—'}</strong>
+                </td>
+                <td><StatusBadge sheet={sheet} /></td>
+                <td>
+                  {pending ? (
+                    <span style={{ display: 'flex', gap: 6 }}>
+                      <button className="btn small" onClick={() => decide(r.id, true)}>Approve</button>
+                      <button className="btn small danger" onClick={() => decide(r.id, false)}>Reject</button>
+                    </span>
+                  ) : sheet?.status === 'APPROVED' ? (
+                    <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>by {sheet.approvedBy}</span>
+                  ) : sheet?.status === 'REJECTED' ? (
+                    <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>by {sheet.approvedBy}</span>
+                  ) : (
+                    <span style={{ fontSize: 11.5, color: 'var(--faint)' }}>Nothing to review</span>
+                  )}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+      {reports.length === 0 && <div className="empty">You have no direct reports.</div>}
+    </div>
+  )
 
   return (
     <div>
       <h1 className="page-title">PTS — Timesheet</h1>
       <p className="page-sub">
-        {isLead
-          ? 'Review weekly hours and approve or reject submitted timesheets for your team.'
-          : 'Fill your weekly hours for the month and save — your reporting manager will approve it.'}
-        {' '}Name, email and SOEID are static; SOEID can be added once, then it locks.
+        {isManager
+          ? 'Fill your own monthly hours, and review and approve the timesheets your direct reports submit.'
+          : 'Fill your weekly hours for the month and submit — your reporting manager will review and approve it.'}
       </p>
 
       {error && <div className="error-banner">{error}</div>}
@@ -111,91 +202,23 @@ export default function Timesheet() {
         <label style={{ fontSize: 13, color: 'var(--muted)' }}>Month:&nbsp;
           <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
         </label>
-        <div className="spacer" />
-        {isLead && pendingCount > 0 && (
-          <span className="badge amber">{pendingCount} awaiting approval</span>
-        )}
-        <span className="badge blue">{isLead ? `${candidates.length} candidates` : 'My timesheet'}</span>
       </div>
 
-      <div className="card" style={{ overflowX: 'auto' }}>
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th><th>SOEID</th>
-              <th>Week 1</th><th>Week 2</th><th>Week 3</th><th>Week 4</th><th>Week 5</th>
-              <th>Total</th><th>Status</th><th>{isLead ? 'Approval' : 'Actions'}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {candidates.map((c) => {
-              const sheet = sheets[c.id]
-              const isPending = sheet && (!sheet.status || sheet.status === 'SUBMITTED')
-              const canEdit = !isLead || c.id === user.candidateId || isLead // leads may correct any row
-              return (
-                <tr key={c.id}>
-                  <td>
-                    <strong>{c.name}</strong>
-                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>{c.email}</div>
-                  </td>
-                  <td>
-                    {c.soeid
-                      ? <span className="badge gray">{c.soeid}</span>
-                      : (
-                        <span style={{ display: 'flex', gap: 4 }}>
-                          <input
-                            type="text" placeholder="Add SOEID" className="num-input"
-                            style={{ width: 90, textAlign: 'left' }}
-                            value={soeidDraft[c.id] || ''}
-                            onChange={(e) => setSoeidDraft((d) => ({ ...d, [c.id]: e.target.value }))}
-                          />
-                          <button className="btn small secondary" onClick={() => addSoeid(c.id)}>Add</button>
-                        </span>
-                      )}
-                  </td>
-                  {['week1', 'week2', 'week3', 'week4', 'week5'].map((wk) => (
-                    <td key={wk}>
-                      <input
-                        type="number" min="0" max="168" className="num-input"
-                        disabled={!canEdit}
-                        value={weekVal(c.id, wk)}
-                        onChange={(e) => setWeek(c.id, wk, e.target.value)}
-                      />
-                    </td>
-                  ))}
-                  <td><strong style={{ color: 'var(--blue-dark)' }}>{totalFor(c.id)}</strong></td>
-                  <td><StatusBadge sheet={sheet} /></td>
-                  <td>
-                    <span style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                      {(dirty[c.id] || !sheet) && (
-                        <button className="btn small" onClick={() => save(c.id)}>
-                          {sheet ? 'Resubmit' : 'Submit'}
-                        </button>
-                      )}
-                      {isLead && isPending && !dirty[c.id] && (
-                        <>
-                          <button className="btn small" onClick={() => decide(c.id, true)}>Approve</button>
-                          <button
-                            className="btn small secondary"
-                            style={{ color: 'var(--red)', borderColor: '#f6cdcd' }}
-                            onClick={() => decide(c.id, false)}
-                          >
-                            Reject
-                          </button>
-                        </>
-                      )}
-                      {sheet?.status === 'APPROVED' && !dirty[c.id] && (
-                        <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>by {sheet.approvedBy}</span>
-                      )}
-                    </span>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-        {candidates.length === 0 && <div className="empty">No candidates yet.</div>}
-      </div>
+      {isManager ? (
+        <>
+          <div className="tabs">
+            <button className={`tab ${tab === 'mine' ? 'active' : ''}`} onClick={() => setTab('mine')}>
+              My Timesheet
+            </button>
+            <button className={`tab ${tab === 'approvals' ? 'active' : ''}`} onClick={() => setTab('approvals')}>
+              Approvals{pendingCount > 0 && <span className="tab-count">{pendingCount}</span>}
+            </button>
+          </div>
+          {tab === 'mine' ? myTimesheet : approvals}
+        </>
+      ) : (
+        myTimesheet
+      )}
 
       {toast && <div className="toast">{toast}</div>}
     </div>

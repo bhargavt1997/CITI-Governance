@@ -54,9 +54,9 @@ public class TrainingController {
     @PostMapping("/trainings")
     @ResponseStatus(HttpStatus.CREATED)
     public Training create(@RequestBody Training t, HttpServletRequest req) {
-        AppUser lead = auth.requireLead(req);
+        AppUser manager = auth.requireManager(req);
         t.setId(null);
-        t.setCreatedBy(lead.getName());
+        t.setCreatedBy(manager.getName());
         return trainings.save(t);
     }
 
@@ -66,7 +66,7 @@ public class TrainingController {
         Training t = trainings.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Training not found"));
         Long candidateId = ((Number) body.get("candidateId")).longValue();
-        auth.requireLeadOrSelf(req, candidateId);
+        auth.requireManagerOrSelf(req, candidateId);
         Candidate c = candidates.findById(candidateId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidate not found"));
         if (enrollments.findByTraining_IdAndCandidate_Id(id, candidateId).isPresent()) {
@@ -83,7 +83,7 @@ public class TrainingController {
                                        HttpServletRequest req) {
         Enrollment e = enrollments.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Enrollment not found"));
-        auth.requireLeadOrSelf(req, e.getCandidate().getId());
+        auth.requireManagerOrSelf(req, e.getCandidate().getId());
         if (body.containsKey("status")) {
             e.setStatus(EnrollmentStatus.valueOf((String) body.get("status")));
         }

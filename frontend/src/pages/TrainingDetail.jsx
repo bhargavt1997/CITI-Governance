@@ -4,7 +4,7 @@ import { api } from '../api'
 import { useAuth } from '../auth'
 
 export default function TrainingDetail() {
-  const { user, isLead } = useAuth()
+  const { user, isManager } = useAuth()
   const { id } = useParams()
   const [data, setData] = useState(null)
   const [candidates, setCandidates] = useState([])
@@ -78,7 +78,7 @@ export default function TrainingDetail() {
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
           <h3 style={{ margin: 0 }}>Enrolled Candidates ({enrollments.length})</h3>
-          {isLead ? (
+          {isManager ? (
             <span style={{ display: 'flex', gap: 8 }}>
               <select value={pick} onChange={(e) => setPick(e.target.value)}>
                 <option value="">Select candidate to enroll…</option>
@@ -154,7 +154,7 @@ export default function TrainingDetail() {
                       </td>
                       <td style={{ fontSize: 12.5, color: 'var(--muted)' }}>{e.notes || '—'}</td>
                       <td>
-                        {(isLead || e.candidate.id === user.candidateId) && (
+                        {(isManager || e.candidate.id === user.candidateId) && (
                           <button className="btn small secondary" onClick={() => startEdit(e)}>Update</button>
                         )}
                       </td>

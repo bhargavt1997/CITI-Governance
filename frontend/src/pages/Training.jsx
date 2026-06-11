@@ -40,7 +40,7 @@ function AddTrainingModal({ onClose, onCreated }) {
 }
 
 export default function Training() {
-  const { isLead } = useAuth()
+  const { isManager } = useAuth()
   const [items, setItems] = useState([])
   const [showAdd, setShowAdd] = useState(false)
   const [error, setError] = useState(null)
@@ -53,8 +53,8 @@ export default function Training() {
     <div>
       <h1 className="page-title">Training & Certifications</h1>
       <p className="page-sub">
-        Catalog of certifications published by leads. Click a card to see enrolled candidates
-        and their progress; leads can add new certifications.
+        Catalog of certifications published by managers. Click a card to see enrolled candidates
+        and their progress; managers can add new certifications.
       </p>
 
       {error && <div className="error-banner">{error}</div>}
@@ -62,7 +62,7 @@ export default function Training() {
       <div className="toolbar">
         <span className="badge blue">{items.length} certifications</span>
         <div className="spacer" />
-        {isLead && (
+        {isManager && (
           <button className="btn" onClick={() => setShowAdd(true)}>+ Add Certification</button>
         )}
       </div>

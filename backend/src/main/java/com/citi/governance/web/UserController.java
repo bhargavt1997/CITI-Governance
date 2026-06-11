@@ -19,11 +19,11 @@ public class UserController {
         this.users = users;
     }
 
-    /** Names of all leads — used as the manager choices when re-mapping a developer. */
-    @GetMapping("/leads")
-    public List<Map<String, Object>> leads() {
+    /** Names of all managers — used as the reporting-manager choices when re-mapping a developer. */
+    @GetMapping("/managers")
+    public List<Map<String, Object>> managers() {
         return users.findAll().stream()
-                .filter(u -> u.getRole() == Role.LEAD)
+                .filter(u -> u.getRole() == Role.MANAGER)
                 .map(u -> Map.<String, Object>of("id", u.getId(), "name", u.getName(), "email", u.getEmail()))
                 .toList();
     }

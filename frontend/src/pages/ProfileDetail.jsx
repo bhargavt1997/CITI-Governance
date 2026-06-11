@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
 } from 'recharts'
-import { api, STAGE_LABELS } from '../api'
+import { api, STAGE_LABELS, ALL_BANDS, bandLabel } from '../api'
 import { useAuth } from '../auth'
 
 const AXES = [
@@ -15,7 +15,7 @@ const AXES = [
 ]
 
 export default function ProfileDetail() {
-  const { user, isLead } = useAuth()
+  const { user, isManager } = useAuth()
   const { id } = useParams()
   const [c, setC] = useState(null)
   const [enrollments, setEnrollments] = useState([])
@@ -26,6 +26,8 @@ export default function ProfileDetail() {
   const [leads, setLeads] = useState([])
   const [editManager, setEditManager] = useState(false)
   const [managerDraft, setManagerDraft] = useState('')
+  const [editDetails, setEditDetails] = useState(false)
+  const [detailsDraft, setDetailsDraft] = useState({})
 
   const load = () => {
     Promise.all([api.candidate(id), api.candidateEnrollments(id)])
@@ -33,7 +35,7 @@ export default function ProfileDetail() {
       .catch((e) => setError(e.message))
   }
   useEffect(() => { load() }, [id])
-  useEffect(() => { if (isLead) api.leads().then(setLeads).catch(() => {}) }, [isLead])
+  useEffect(() => { if (isManager) api.managers().then(setLeads).catch(() => {}) }, [isManager])
 
   const saveManager = async () => {
     try {
@@ -73,6 +75,30 @@ export default function ProfileDetail() {
     }
   }
 
+  const DETAIL_FIELDS = ['employeeId', 'band', 'wave', 'pod', 'location', 'joinDate', 'skillGaps', 'allocations', 'activities']
+  const startEditDetails = () => {
+    const d = {}
+    DETAIL_FIELDS.forEach((f) => { d[f] = c[f] ?? '' })
+    setDetailsDraft(d)
+    setEditDetails(true)
+  }
+  const saveDetails = async () => {
+    try {
+      const payload = {}
+      DETAIL_FIELDS.forEach((f) => { payload[f] = detailsDraft[f] === '' ? null : detailsDraft[f] })
+      const updated = await api.updateCandidate(c.id, payload)
+      setC(updated)
+      setEditDetails(false)
+      setToast('Profile updated ✓')
+      setTimeout(() => setToast(null), 2500)
+    } catch (e) {
+      setToast(e.message)
+      setTimeout(() => setToast(null), 4000)
+    }
+  }
+  const setField = (f) => (e) => setDetailsDraft((d) => ({ ...d, [f]: e.target.value }))
+  const canEditProfile = isManager || user.candidateId === c.id
+
   return (
     <div>
       <h1 className="page-title">{c.name}</h1>
@@ -83,53 +109,85 @@ export default function ProfileDetail() {
 
       <div className="two-col">
         <div className="card">
-          <h3>Details</h3>
-          <div className="field-grid">
-            <div className="field"><label>Employee ID</label><div>{c.employeeId || '—'}</div></div>
-            <div className="field"><label>Band</label><div>{c.band || '—'}</div></div>
-            <div className="field"><label>Wave</label><div>{c.wave || '—'}</div></div>
-            <div className="field"><label>Pod</label><div>{c.pod || '—'}</div></div>
-            <div className="field"><label>Location</label><div>{c.location || '—'}</div></div>
-            <div className="field"><label>Join Date</label><div>{c.joinDate || '—'}</div></div>
-            <div className="field">
-              <label>Reporting Manager</label>
-              {!editManager ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {c.reportingManager || '—'}
-                  {isLead && (
-                    <button
-                      className="btn small secondary"
-                      onClick={() => { setManagerDraft(c.reportingManager || ''); setEditManager(true) }}
-                    >
-                      Change
-                    </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h3 style={{ margin: 0 }}>Details</h3>
+            {!editDetails
+              ? canEditProfile && <button className="btn small secondary" onClick={startEditDetails}>Edit profile</button>
+              : (
+                <span style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn small secondary" onClick={() => setEditDetails(false)}>Cancel</button>
+                  <button className="btn small" onClick={saveDetails}>Save</button>
+                </span>
+              )}
+          </div>
+
+          {!editDetails ? (
+            <>
+              <div className="field-grid">
+                <div className="field"><label>Employee ID</label><div>{c.employeeId || '—'}</div></div>
+                <div className="field"><label>Band</label><div>{c.band ? bandLabel(c.band) : '—'}</div></div>
+                <div className="field"><label>Wave</label><div>{c.wave || '—'}</div></div>
+                <div className="field"><label>Pod</label><div>{c.pod || '—'}</div></div>
+                <div className="field"><label>Location</label><div>{c.location || '—'}</div></div>
+                <div className="field"><label>Join Date</label><div>{c.joinDate || '—'}</div></div>
+                <div className="field">
+                  <label>Reporting Manager</label>
+                  {!editManager ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {c.reportingManager || '—'}
+                      {isManager && (
+                        <button
+                          className="btn small secondary"
+                          onClick={() => { setManagerDraft(c.reportingManager || ''); setEditManager(true) }}
+                        >
+                          Change
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <select value={managerDraft} onChange={(e) => setManagerDraft(e.target.value)}>
+                        <option value="">Select manager…</option>
+                        {leads.map((l) => <option key={l.id} value={l.name}>{l.name}</option>)}
+                      </select>
+                      <button className="btn small" disabled={!managerDraft} onClick={saveManager}>Save</button>
+                      <button className="btn small secondary" onClick={() => setEditManager(false)}>Cancel</button>
+                    </div>
                   )}
                 </div>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <select value={managerDraft} onChange={(e) => setManagerDraft(e.target.value)}>
-                    <option value="">Select manager…</option>
-                    {leads.map((l) => <option key={l.id} value={l.name}>{l.name}</option>)}
-                  </select>
-                  <button className="btn small" disabled={!managerDraft} onClick={saveManager}>Save</button>
-                  <button className="btn small secondary" onClick={() => setEditManager(false)}>Cancel</button>
-                </div>
-              )}
+              </div>
+              <h3 style={{ marginTop: 18 }}>Skill Gaps</h3>
+              <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>{c.skillGaps || 'None recorded.'}</p>
+              <h3 style={{ marginTop: 18 }}>Allocations</h3>
+              <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>{c.allocations || 'Not allocated yet.'}</p>
+              <h3 style={{ marginTop: 18 }}>Activities</h3>
+              <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>{c.activities || 'No activities recorded.'}</p>
+            </>
+          ) : (
+            <div className="field-grid">
+              <div className="field"><label>Employee ID</label><input type="text" value={detailsDraft.employeeId} onChange={setField('employeeId')} /></div>
+              <div className="field"><label>Band</label>
+                <select value={detailsDraft.band || ''} onChange={setField('band')}>
+                  <option value="">—</option>
+                  {ALL_BANDS.map((b) => <option key={b} value={b}>{bandLabel(b)}</option>)}
+                </select>
+              </div>
+              <div className="field"><label>Wave</label><input type="text" value={detailsDraft.wave} onChange={setField('wave')} /></div>
+              <div className="field"><label>Pod</label><input type="text" value={detailsDraft.pod} onChange={setField('pod')} /></div>
+              <div className="field"><label>Location</label><input type="text" value={detailsDraft.location} onChange={setField('location')} /></div>
+              <div className="field"><label>Join Date</label><input type="date" value={detailsDraft.joinDate || ''} onChange={setField('joinDate')} /></div>
+              <div className="field" style={{ gridColumn: '1 / -1' }}><label>Skill Gaps</label><textarea rows={2} value={detailsDraft.skillGaps} onChange={setField('skillGaps')} /></div>
+              <div className="field" style={{ gridColumn: '1 / -1' }}><label>Allocations</label><textarea rows={2} value={detailsDraft.allocations} onChange={setField('allocations')} /></div>
+              <div className="field" style={{ gridColumn: '1 / -1' }}><label>Activities</label><textarea rows={2} value={detailsDraft.activities} onChange={setField('activities')} /></div>
             </div>
-          </div>
-          <h3 style={{ marginTop: 18 }}>Skill Gaps</h3>
-          <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>{c.skillGaps || 'None recorded.'}</p>
-          <h3 style={{ marginTop: 18 }}>Allocations</h3>
-          <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>{c.allocations || 'Not allocated yet.'}</p>
-          <h3 style={{ marginTop: 18 }}>Activities</h3>
-          <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>{c.activities || 'No activities recorded.'}</p>
+          )}
         </div>
 
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ margin: 0 }}>Skill Profile</h3>
             {!editSkills
-              ? (isLead || user.candidateId === c.id) && <button className="btn small secondary" onClick={startEdit}>Edit</button>
+              ? (isManager || user.candidateId === c.id) && <button className="btn small secondary" onClick={startEdit}>Edit</button>
               : (
                 <span style={{ display: 'flex', gap: 8 }}>
                   <button className="btn small secondary" onClick={() => setEditSkills(false)}>Cancel</button>
