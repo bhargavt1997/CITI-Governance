@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { api, CURRENT_USER } from './api'
+import { api } from './api'
+import { useAuth } from './auth'
+import Login from './pages/Login.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Timesheet from './pages/Timesheet.jsx'
 import Onboarding from './pages/Onboarding.jsx'
@@ -31,7 +33,7 @@ function Breadcrumb() {
     <nav className="breadcrumb">
       {crumbs.map((c, i) => (
         <span key={c.to}>
-          {i > 0 && <span className="crumb-sep">/</span>}
+          {i > 0 && <span className="crumb-sep">›</span>}
           <NavLink to={c.to} className="crumb">{c.label}</NavLink>
         </span>
       ))}
@@ -53,7 +55,7 @@ function SearchBox() {
         const r = await api.candidates(q.trim())
         setResults(r.slice(0, 8))
         setOpen(true)
-      } catch { /* backend not reachable yet */ }
+      } catch { /* backend not reachable */ }
     }, 250)
     return () => clearTimeout(t)
   }, [q])
@@ -66,11 +68,13 @@ function SearchBox() {
 
   return (
     <div className="search-box" ref={boxRef}>
-      <span className="search-icon">🔍</span>
+      <svg className="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Search candidates by name, email, SOEID…"
+        placeholder="Search candidates…"
       />
       {open && results.length > 0 && (
         <div className="search-results">
@@ -91,8 +95,10 @@ function SearchBox() {
 }
 
 function UserMenu() {
+  const { user, logout } = useAuth()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
@@ -100,27 +106,29 @@ function UserMenu() {
     return () => document.removeEventListener('mousedown', onClick)
   }, [])
 
-  const initials = CURRENT_USER.name.split(' ').map((w) => w[0]).join('')
+  const initials = user.name.split(' ').map((w) => w[0]).join('').slice(0, 2)
+
+  const goProfile = () => {
+    setOpen(false)
+    if (user.candidateId) navigate(`/profiles/${user.candidateId}`)
+    else navigate('/profiles')
+  }
 
   return (
     <div className="user-menu" ref={ref}>
       <button className="user-chip" onClick={() => setOpen(!open)}>
         <span className="avatar">{initials}</span>
-        <span className="user-name">{CURRENT_USER.name}</span>
-        <span className="user-role">{CURRENT_USER.role}</span>
+        <span className="user-name">{user.name}</span>
+        <span className="user-role">{user.role}</span>
       </button>
       {open && (
         <div className="user-dropdown">
           <div className="user-dropdown-header">
-            <strong>{CURRENT_USER.name}</strong>
-            <span>{CURRENT_USER.email}</span>
+            <strong>{user.name}</strong>
+            <span>{user.email}</span>
           </div>
-          <button onClick={() => { setOpen(false); alert('Profile settings arrive with the auth phase') }}>
-            👤 My Profile
-          </button>
-          <button onClick={() => { setOpen(false); alert('Logout arrives with the auth phase') }}>
-            ⎋ Logout
-          </button>
+          <button onClick={goProfile}>👤 My Profile</button>
+          <button onClick={() => { setOpen(false); logout() }}>↪ Logout</button>
         </div>
       )}
     </div>
@@ -128,6 +136,11 @@ function UserMenu() {
 }
 
 export default function App() {
+  const { user, booting } = useAuth()
+
+  if (booting) return <div className="boot-screen">Loading…</div>
+  if (!user) return <Login />
+
   return (
     <div className="app">
       <aside className="sidebar">
@@ -136,13 +149,15 @@ export default function App() {
           <span>Citi Governance</span>
         </div>
         <nav>
-          <NavLink to="/" end>📊 Dashboard</NavLink>
-          <NavLink to="/pts">🕒 PTS — Timesheet</NavLink>
-          <NavLink to="/onboarding">🧭 Onboarding</NavLink>
-          <NavLink to="/profiles">👥 Profiles</NavLink>
-          <NavLink to="/training">🎓 Training</NavLink>
+          <NavLink to="/" end><span className="nav-ico">▦</span> Dashboard</NavLink>
+          <NavLink to="/pts"><span className="nav-ico">◷</span> PTS — Timesheet</NavLink>
+          <NavLink to="/onboarding"><span className="nav-ico">⇶</span> Onboarding</NavLink>
+          <NavLink to="/profiles"><span className="nav-ico">◉</span> Profiles</NavLink>
+          <NavLink to="/training"><span className="nav-ico">✦</span> Training</NavLink>
         </nav>
-        <div className="sidebar-foot">Phase 1 · Governance module</div>
+        <div className="sidebar-foot">
+          Signed in as <strong>{user.name.split(' ')[0]}</strong> · {user.role === 'LEAD' ? 'Lead' : 'Developer'}
+        </div>
       </aside>
       <div className="main">
         <header className="topbar">

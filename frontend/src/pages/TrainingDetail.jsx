@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { api } from '../api'
+import { useAuth } from '../auth'
 
 export default function TrainingDetail() {
+  const { user, isLead } = useAuth()
   const { id } = useParams()
   const [data, setData] = useState(null)
   const [candidates, setCandidates] = useState([])
@@ -26,10 +28,12 @@ export default function TrainingDetail() {
   const enrolledIds = new Set(enrollments.map((e) => e.candidate.id))
   const available = candidates.filter((c) => !enrolledIds.has(c.id))
 
-  const enroll = async () => {
-    if (!pick) return
+  const myEnrolled = user.candidateId != null && enrolledIds.has(user.candidateId)
+
+  const enroll = async (candidateId) => {
+    if (!candidateId) return
     try {
-      await api.enroll(t.id, Number(pick))
+      await api.enroll(t.id, Number(candidateId))
       setPick('')
       load()
       setToast('Candidate enrolled ✓')
@@ -74,13 +78,21 @@ export default function TrainingDetail() {
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
           <h3 style={{ margin: 0 }}>Enrolled Candidates ({enrollments.length})</h3>
-          <span style={{ display: 'flex', gap: 8 }}>
-            <select value={pick} onChange={(e) => setPick(e.target.value)}>
-              <option value="">Select candidate to enroll…</option>
-              {available.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            <button className="btn small" disabled={!pick} onClick={enroll}>Enroll</button>
-          </span>
+          {isLead ? (
+            <span style={{ display: 'flex', gap: 8 }}>
+              <select value={pick} onChange={(e) => setPick(e.target.value)}>
+                <option value="">Select candidate to enroll…</option>
+                {available.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <button className="btn small" disabled={!pick} onClick={() => enroll(pick)}>Enroll</button>
+            </span>
+          ) : (
+            user.candidateId != null && (
+              myEnrolled
+                ? <span className="badge green">You are enrolled</span>
+                : <button className="btn small" onClick={() => enroll(user.candidateId)}>Enroll myself</button>
+            )
+          )}
         </div>
 
         {enrollments.length === 0 && <div className="empty">Nobody enrolled yet.</div>}
@@ -141,7 +153,11 @@ export default function TrainingDetail() {
                         </div>
                       </td>
                       <td style={{ fontSize: 12.5, color: 'var(--muted)' }}>{e.notes || '—'}</td>
-                      <td><button className="btn small secondary" onClick={() => startEdit(e)}>Update</button></td>
+                      <td>
+                        {(isLead || e.candidate.id === user.candidateId) && (
+                          <button className="btn small secondary" onClick={() => startEdit(e)}>Update</button>
+                        )}
+                      </td>
                     </>
                   )}
                 </tr>

@@ -1,8 +1,10 @@
 package com.citi.governance.web;
 
+import com.citi.governance.auth.AuthService;
 import com.citi.governance.model.*;
 import com.citi.governance.repo.CandidateRepository;
 import com.citi.governance.repo.StageHistoryRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -16,10 +18,12 @@ public class CandidateController {
 
     private final CandidateRepository candidates;
     private final StageHistoryRepository history;
+    private final AuthService auth;
 
-    public CandidateController(CandidateRepository candidates, StageHistoryRepository history) {
+    public CandidateController(CandidateRepository candidates, StageHistoryRepository history, AuthService auth) {
         this.candidates = candidates;
         this.history = history;
+        this.auth = auth;
     }
 
     @GetMapping
@@ -38,7 +42,8 @@ public class CandidateController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Candidate create(@RequestBody Candidate c) {
+    public Candidate create(@RequestBody Candidate c, HttpServletRequest req) {
+        AppUser lead = auth.requireLead(req);
         c.setId(null);
         if (c.getCurrentStage() == null) {
             c.setCurrentStage(OnboardingStage.NOMINATED);
@@ -47,14 +52,15 @@ public class CandidateController {
         StageHistory h = new StageHistory();
         h.setCandidate(saved);
         h.setStage(OnboardingStage.NOMINATED);
-        h.setCompletedBy(c.getReportingManager() != null ? c.getReportingManager() : "system");
+        h.setCompletedBy(lead.getName());
         h.setNotes("Candidate nominated");
         history.save(h);
         return saved;
     }
 
     @PutMapping("/{id}")
-    public Candidate update(@PathVariable Long id, @RequestBody Candidate in) {
+    public Candidate update(@PathVariable Long id, @RequestBody Candidate in, HttpServletRequest req) {
+        auth.requireLeadOrSelf(req, id);
         Candidate c = get(id);
         if (in.getName() != null) c.setName(in.getName());
         if (in.getEmployeeId() != null) c.setEmployeeId(in.getEmployeeId());
@@ -73,7 +79,8 @@ public class CandidateController {
 
     /** SOEID can be set once if missing at registration; afterwards it is locked. */
     @PostMapping("/{id}/soeid")
-    public Candidate setSoeid(@PathVariable Long id, @RequestBody Map<String, String> body) {
+    public Candidate setSoeid(@PathVariable Long id, @RequestBody Map<String, String> body, HttpServletRequest req) {
+        auth.requireLeadOrSelf(req, id);
         Candidate c = get(id);
         if (c.getSoeid() != null && !c.getSoeid().isBlank()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "SOEID already set and cannot be changed");
@@ -87,7 +94,8 @@ public class CandidateController {
     }
 
     @PutMapping("/{id}/skills")
-    public Candidate updateSkills(@PathVariable Long id, @RequestBody Map<String, Integer> body) {
+    public Candidate updateSkills(@PathVariable Long id, @RequestBody Map<String, Integer> body, HttpServletRequest req) {
+        auth.requireLeadOrSelf(req, id);
         Candidate c = get(id);
         if (body.containsKey("technical")) c.setSkillTechnical(clamp(body.get("technical")));
         if (body.containsKey("functional")) c.setSkillFunctional(clamp(body.get("functional")));
@@ -101,9 +109,11 @@ public class CandidateController {
         return Math.max(0, Math.min(100, v == null ? 0 : v));
     }
 
-    /** Advance the candidate to the next onboarding stage and record it in the audit trail. */
+    /** Advance the candidate to the next onboarding stage and record it in the audit trail. Leads only. */
     @PostMapping("/{id}/advance-stage")
-    public Candidate advanceStage(@PathVariable Long id, @RequestBody(required = false) Map<String, String> body) {
+    public Candidate advanceStage(@PathVariable Long id, @RequestBody(required = false) Map<String, String> body,
+                                  HttpServletRequest req) {
+        AppUser lead = auth.requireLead(req);
         Candidate c = get(id);
         OnboardingStage current = c.getCurrentStage();
         if (current == OnboardingStage.ONBOARDED) {
@@ -116,7 +126,7 @@ public class CandidateController {
         StageHistory h = new StageHistory();
         h.setCandidate(c);
         h.setStage(next);
-        h.setCompletedBy(body != null ? body.getOrDefault("completedBy", "system") : "system");
+        h.setCompletedBy(lead.getName());
         h.setNotes(body != null ? body.get("notes") : null);
         history.save(h);
         return c;
@@ -129,7 +139,8 @@ public class CandidateController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
+    public void delete(@PathVariable Long id, HttpServletRequest req) {
+        auth.requireLead(req);
         candidates.deleteById(id);
     }
 }

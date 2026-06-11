@@ -37,6 +37,10 @@ public class Enrollment {
         return training != null ? training.getId() : null;
     }
 
+    public String getTrainingTitle() {
+        return training != null ? training.getTitle() : null;
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Training getTraining() { return training; }

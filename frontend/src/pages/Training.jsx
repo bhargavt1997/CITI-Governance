@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api, CURRENT_USER } from '../api'
+import { api } from '../api'
+import { useAuth } from '../auth'
 
 function AddTrainingModal({ onClose, onCreated }) {
   const [form, setForm] = useState({ title: '', provider: '', category: 'Technical', description: '', targetDate: '' })
@@ -10,7 +11,7 @@ function AddTrainingModal({ onClose, onCreated }) {
   const submit = async () => {
     if (!form.title.trim()) { setErr('Title is required'); return }
     try {
-      await api.createTraining({ ...form, targetDate: form.targetDate || null, createdBy: CURRENT_USER.name })
+      await api.createTraining({ ...form, targetDate: form.targetDate || null })
       onCreated()
     } catch (e) { setErr(e.message) }
   }
@@ -39,6 +40,7 @@ function AddTrainingModal({ onClose, onCreated }) {
 }
 
 export default function Training() {
+  const { isLead } = useAuth()
   const [items, setItems] = useState([])
   const [showAdd, setShowAdd] = useState(false)
   const [error, setError] = useState(null)
@@ -60,7 +62,7 @@ export default function Training() {
       <div className="toolbar">
         <span className="badge blue">{items.length} certifications</span>
         <div className="spacer" />
-        {CURRENT_USER.role === 'LEAD' && (
+        {isLead && (
           <button className="btn" onClick={() => setShowAdd(true)}>+ Add Certification</button>
         )}
       </div>

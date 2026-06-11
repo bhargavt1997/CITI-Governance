@@ -1,10 +1,19 @@
 const BASE = '/api'
 
+let onAuthFailure = null
+export const setAuthFailureHandler = (fn) => { onAuthFailure = fn }
+
 async function request(path, options = {}) {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  })
+  const headers = { 'Content-Type': 'application/json' }
+  const token = localStorage.getItem('cg_token')
+  if (token) headers.Authorization = `Bearer ${token}`
+
+  const res = await fetch(`${BASE}${path}`, { headers, ...options })
+
+  if (res.status === 401 && !path.startsWith('/auth/login')) {
+    onAuthFailure?.()
+    throw new Error('Session expired — please sign in again')
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw new Error(body.message || `Request failed (${res.status})`)
@@ -14,6 +23,11 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  // Auth
+  login: (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  logout: () => request('/auth/logout', { method: 'POST' }),
+  me: () => request('/auth/me'),
+
   // Dashboard
   dashboardSummary: () => request('/dashboard/summary'),
 
@@ -24,8 +38,8 @@ export const api = {
   updateCandidate: (id, data) => request(`/candidates/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   setSoeid: (id, soeid) => request(`/candidates/${id}/soeid`, { method: 'POST', body: JSON.stringify({ soeid }) }),
   updateSkills: (id, skills) => request(`/candidates/${id}/skills`, { method: 'PUT', body: JSON.stringify(skills) }),
-  advanceStage: (id, completedBy, notes) =>
-    request(`/candidates/${id}/advance-stage`, { method: 'POST', body: JSON.stringify({ completedBy, notes }) }),
+  advanceStage: (id, notes) =>
+    request(`/candidates/${id}/advance-stage`, { method: 'POST', body: JSON.stringify({ notes }) }),
   stageHistory: (id) => request(`/candidates/${id}/stage-history`),
   candidateEnrollments: (id) => request(`/candidates/${id}/enrollments`),
 
@@ -35,6 +49,11 @@ export const api = {
     return request(`/timesheets${qs ? `?${qs}` : ''}`)
   },
   saveTimesheet: (data) => request('/timesheets', { method: 'POST', body: JSON.stringify(data) }),
+  decideTimesheet: (id, approved) =>
+    request(`/timesheets/${id}/decision`, { method: 'POST', body: JSON.stringify({ approved }) }),
+
+  // Users
+  leads: () => request('/users/leads'),
 
   // Trainings
   trainings: () => request('/trainings'),
@@ -65,11 +84,4 @@ export const STAGE_LABELS = {
   CITI_CLEARANCE_RECEIVED: 'Citi Clearance Received',
   VDI_SETUP_IN_PROGRESS: 'VDI Setup In Progress',
   ONBOARDED: 'Onboarded',
-}
-
-// Simulated logged-in user until SSO/auth lands in a later phase
-export const CURRENT_USER = {
-  name: 'Suresh Iyer',
-  email: 'suresh.iyer@deloitte.com',
-  role: 'LEAD',
 }

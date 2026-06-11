@@ -63,7 +63,10 @@
       "Bash(git init *)",
       "Bash(git remote *)",
       "Bash(git add *)",
-      "Bash(git commit -q -m 'Citi Governance app — Spring Boot + React + Postgres \\(governance module\\) *)"
+      "Bash(git commit -q -m 'Citi Governance app — Spring Boot + React + Postgres \\(governance module\\) *)",
+      "Bash(git push *)",
+      "Bash(pkill -f \"governance-backend\")",
+      "Bash(xargs kill -9)"
     ]
   }
 }

@@ -29,6 +29,13 @@ public class Timesheet {
 
     private Double total = 0.0;
 
+    /** Approval workflow: developer saves → SUBMITTED; reporting manager approves/rejects. */
+    @Enumerated(EnumType.STRING)
+    private TimesheetStatus status = TimesheetStatus.SUBMITTED;
+
+    private String approvedBy;
+    private LocalDateTime approvedAt;
+
     private LocalDateTime updatedAt = LocalDateTime.now();
 
     public void recalcTotal() {
@@ -57,6 +64,12 @@ public class Timesheet {
     public void setWeek5(Double week5) { this.week5 = week5; }
     public Double getTotal() { return total; }
     public void setTotal(Double total) { this.total = total; }
+    public TimesheetStatus getStatus() { return status; }
+    public void setStatus(TimesheetStatus status) { this.status = status; }
+    public String getApprovedBy() { return approvedBy; }
+    public void setApprovedBy(String approvedBy) { this.approvedBy = approvedBy; }
+    public LocalDateTime getApprovedAt() { return approvedAt; }
+    public void setApprovedAt(LocalDateTime approvedAt) { this.approvedAt = approvedAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

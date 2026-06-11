@@ -69,10 +69,14 @@ public class DashboardController {
             monthlyTrends.add(e);
         });
 
-        // PTS hours per month
+        // PTS hours per month + pending approvals
         Map<String, Double> ptsByMonthMap = new TreeMap<>();
+        long pendingApprovals = 0;
         for (Timesheet t : timesheets.findAll()) {
             ptsByMonthMap.merge(t.getMonth(), t.getTotal() == null ? 0.0 : t.getTotal(), Double::sum);
+            if (t.getStatus() == null || t.getStatus() == com.citi.governance.model.TimesheetStatus.SUBMITTED) {
+                pendingApprovals++;
+            }
         }
         List<Map<String, Object>> ptsByMonth = new ArrayList<>();
         ptsByMonthMap.forEach((m, hours) -> {
@@ -89,6 +93,7 @@ public class DashboardController {
         out.put("totalSelected", selected);
         out.put("onboarded", onboarded);
         out.put("inPipeline", inPipeline);
+        out.put("pendingApprovals", pendingApprovals);
         out.put("stageBreakdown", stageBreakdown);
         out.put("monthlyTrends", monthlyTrends);
         out.put("ptsByMonth", ptsByMonth);

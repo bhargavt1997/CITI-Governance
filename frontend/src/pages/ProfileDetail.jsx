@@ -4,6 +4,7 @@ import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
 } from 'recharts'
 import { api, STAGE_LABELS } from '../api'
+import { useAuth } from '../auth'
 
 const AXES = [
   { key: 'skillTechnical', label: 'Technical', field: 'technical' },
@@ -14,6 +15,7 @@ const AXES = [
 ]
 
 export default function ProfileDetail() {
+  const { user, isLead } = useAuth()
   const { id } = useParams()
   const [c, setC] = useState(null)
   const [enrollments, setEnrollments] = useState([])
@@ -21,6 +23,9 @@ export default function ProfileDetail() {
   const [editSkills, setEditSkills] = useState(false)
   const [skillDraft, setSkillDraft] = useState({})
   const [toast, setToast] = useState(null)
+  const [leads, setLeads] = useState([])
+  const [editManager, setEditManager] = useState(false)
+  const [managerDraft, setManagerDraft] = useState('')
 
   const load = () => {
     Promise.all([api.candidate(id), api.candidateEnrollments(id)])
@@ -28,6 +33,20 @@ export default function ProfileDetail() {
       .catch((e) => setError(e.message))
   }
   useEffect(() => { load() }, [id])
+  useEffect(() => { if (isLead) api.leads().then(setLeads).catch(() => {}) }, [isLead])
+
+  const saveManager = async () => {
+    try {
+      const updated = await api.updateCandidate(c.id, { reportingManager: managerDraft })
+      setC(updated)
+      setEditManager(false)
+      setToast('Reporting manager updated ✓')
+      setTimeout(() => setToast(null), 2500)
+    } catch (e) {
+      setToast(e.message)
+      setTimeout(() => setToast(null), 4000)
+    }
+  }
 
   if (error) return <div className="error-banner">{error}</div>
   if (!c) return <div className="empty">Loading profile…</div>
@@ -72,7 +91,31 @@ export default function ProfileDetail() {
             <div className="field"><label>Pod</label><div>{c.pod || '—'}</div></div>
             <div className="field"><label>Location</label><div>{c.location || '—'}</div></div>
             <div className="field"><label>Join Date</label><div>{c.joinDate || '—'}</div></div>
-            <div className="field"><label>Reporting Manager</label><div>{c.reportingManager || '—'}</div></div>
+            <div className="field">
+              <label>Reporting Manager</label>
+              {!editManager ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {c.reportingManager || '—'}
+                  {isLead && (
+                    <button
+                      className="btn small secondary"
+                      onClick={() => { setManagerDraft(c.reportingManager || ''); setEditManager(true) }}
+                    >
+                      Change
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <select value={managerDraft} onChange={(e) => setManagerDraft(e.target.value)}>
+                    <option value="">Select manager…</option>
+                    {leads.map((l) => <option key={l.id} value={l.name}>{l.name}</option>)}
+                  </select>
+                  <button className="btn small" disabled={!managerDraft} onClick={saveManager}>Save</button>
+                  <button className="btn small secondary" onClick={() => setEditManager(false)}>Cancel</button>
+                </div>
+              )}
+            </div>
           </div>
           <h3 style={{ marginTop: 18 }}>Skill Gaps</h3>
           <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>{c.skillGaps || 'None recorded.'}</p>
@@ -86,7 +129,7 @@ export default function ProfileDetail() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ margin: 0 }}>Skill Profile</h3>
             {!editSkills
-              ? <button className="btn small secondary" onClick={startEdit}>Edit</button>
+              ? (isLead || user.candidateId === c.id) && <button className="btn small secondary" onClick={startEdit}>Edit</button>
               : (
                 <span style={{ display: 'flex', gap: 8 }}>
                   <button className="btn small secondary" onClick={() => setEditSkills(false)}>Cancel</button>
@@ -127,11 +170,12 @@ export default function ProfileDetail() {
         {enrollments.length > 0 && (
           <table>
             <thead>
-              <tr><th>Status</th><th>Progress</th><th>Notes</th></tr>
+              <tr><th>Training</th><th>Status</th><th>Progress</th><th>Notes</th></tr>
             </thead>
             <tbody>
               {enrollments.map((e) => (
                 <tr key={e.id}>
+                  <td><strong>{e.trainingTitle || '—'}</strong></td>
                   <td><span className={`badge ${e.status === 'COMPLETED' ? 'green' : e.status === 'IN_PROGRESS' ? 'amber' : 'gray'}`}>{e.status.replace('_', ' ')}</span></td>
                   <td style={{ width: 220 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

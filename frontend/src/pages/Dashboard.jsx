@@ -35,7 +35,7 @@ export default function Dashboard() {
     { label: 'CARAT Cleared', value: summary.caratCleared },
     { label: 'Total Selected', value: summary.totalSelected },
     { label: 'Onboarded', value: summary.onboarded },
-    { label: 'In Pipeline', value: summary.inPipeline },
+    { label: 'PTS Awaiting Approval', value: summary.pendingApprovals ?? 0 },
   ]
 
   const pieData = Object.entries(summary.stageBreakdown)
@@ -91,10 +91,15 @@ export default function Dashboard() {
           <h3>Pipeline Stage Breakdown</h3>
           <ResponsiveContainer width="100%" height={240}>
             <PieChart>
-              <Pie data={pieData} dataKey="value" nameKey="name" outerRadius={85} label={(d) => `${d.name} (${d.value})`} fontSize={10}>
+              <Pie
+                data={pieData} dataKey="value" nameKey="name"
+                innerRadius={50} outerRadius={85} paddingAngle={2}
+                isAnimationActive={false}
+              >
                 {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
               </Pie>
               <Tooltip />
+              <Legend layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: 12 }} />
             </PieChart>
           </ResponsiveContainer>
         </div>

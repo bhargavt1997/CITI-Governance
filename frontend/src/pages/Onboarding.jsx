@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { api, STAGES, STAGE_LABELS, CURRENT_USER } from '../api'
+import { api, STAGES, STAGE_LABELS } from '../api'
+import { useAuth } from '../auth'
 
 function Stepper({ stage }) {
   const reached = STAGES.indexOf(stage)
@@ -15,8 +16,8 @@ function Stepper({ stage }) {
   )
 }
 
-function AddCandidateModal({ onClose, onCreated }) {
-  const [form, setForm] = useState({ name: '', email: '', band: 'C', wave: 'Wave 3', pod: '', reportingManager: CURRENT_USER.name })
+function AddCandidateModal({ onClose, onCreated, leadName }) {
+  const [form, setForm] = useState({ name: '', email: '', band: 'C', wave: 'Wave 3', pod: '', reportingManager: leadName })
   const [err, setErr] = useState(null)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
@@ -53,6 +54,7 @@ function AddCandidateModal({ onClose, onCreated }) {
 }
 
 export default function Onboarding() {
+  const { user, isLead } = useAuth()
   const [candidates, setCandidates] = useState([])
   const [expanded, setExpanded] = useState(null)
   const [history, setHistory] = useState({})
@@ -79,7 +81,7 @@ export default function Onboarding() {
     const nextLabel = STAGE_LABELS[STAGES[nextIdx]]
     if (!confirm(`Move ${c.name} to "${nextLabel}"?`)) return
     try {
-      await api.advanceStage(c.id, CURRENT_USER.name)
+      await api.advanceStage(c.id)
       setHistory((m) => ({ ...m, [c.id]: undefined }))
       load()
       setToast(`${c.name} → ${nextLabel} ✓`)
@@ -104,7 +106,7 @@ export default function Onboarding() {
         <span className="badge blue">{candidates.length} candidates</span>
         <span className="badge green">{candidates.filter((c) => c.currentStage === 'ONBOARDED').length} onboarded</span>
         <div className="spacer" />
-        <button className="btn" onClick={() => setShowAdd(true)}>+ Nominate Candidate</button>
+        {isLead && <button className="btn" onClick={() => setShowAdd(true)}>+ Nominate Candidate</button>}
       </div>
 
       <div className="card" style={{ padding: 0 }}>
@@ -120,6 +122,7 @@ export default function Onboarding() {
                 key={c.id} c={c}
                 expanded={expanded === c.id}
                 history={history[c.id]}
+                canAdvance={isLead}
                 onToggle={() => toggle(c.id)}
                 onAdvance={() => advance(c)}
               />
@@ -131,6 +134,7 @@ export default function Onboarding() {
 
       {showAdd && (
         <AddCandidateModal
+          leadName={user.name}
           onClose={() => setShowAdd(false)}
           onCreated={() => { setShowAdd(false); load() }}
         />
@@ -140,7 +144,7 @@ export default function Onboarding() {
   )
 }
 
-function FragmentRow({ c, expanded, history, onToggle, onAdvance }) {
+function FragmentRow({ c, expanded, history, canAdvance, onToggle, onAdvance }) {
   const isDone = c.currentStage === 'ONBOARDED'
   return (
     <>
@@ -158,7 +162,7 @@ function FragmentRow({ c, expanded, history, onToggle, onAdvance }) {
           <td colSpan={7} style={{ background: '#fafbfe' }}>
             <Stepper stage={c.currentStage} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 4px 4px' }}>
-              {!isDone && (
+              {!isDone && canAdvance && (
                 <button className="btn small" onClick={(e) => { e.stopPropagation(); onAdvance() }}>
                   Complete current step → {STAGE_LABELS[STAGES[STAGES.indexOf(c.currentStage) + 1]]}
                 </button>

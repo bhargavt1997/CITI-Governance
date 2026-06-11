@@ -1,9 +1,11 @@
 package com.citi.governance.web;
 
+import com.citi.governance.auth.AuthService;
 import com.citi.governance.model.*;
 import com.citi.governance.repo.CandidateRepository;
 import com.citi.governance.repo.EnrollmentRepository;
 import com.citi.governance.repo.TrainingRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -19,12 +21,14 @@ public class TrainingController {
     private final TrainingRepository trainings;
     private final EnrollmentRepository enrollments;
     private final CandidateRepository candidates;
+    private final AuthService auth;
 
     public TrainingController(TrainingRepository trainings, EnrollmentRepository enrollments,
-                              CandidateRepository candidates) {
+                              CandidateRepository candidates, AuthService auth) {
         this.trainings = trainings;
         this.enrollments = enrollments;
         this.candidates = candidates;
+        this.auth = auth;
     }
 
     @GetMapping("/trainings")
@@ -49,17 +53,20 @@ public class TrainingController {
 
     @PostMapping("/trainings")
     @ResponseStatus(HttpStatus.CREATED)
-    public Training create(@RequestBody Training t) {
+    public Training create(@RequestBody Training t, HttpServletRequest req) {
+        AppUser lead = auth.requireLead(req);
         t.setId(null);
+        t.setCreatedBy(lead.getName());
         return trainings.save(t);
     }
 
     @PostMapping("/trainings/{id}/enroll")
     @ResponseStatus(HttpStatus.CREATED)
-    public Enrollment enroll(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+    public Enrollment enroll(@PathVariable Long id, @RequestBody Map<String, Object> body, HttpServletRequest req) {
         Training t = trainings.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Training not found"));
         Long candidateId = ((Number) body.get("candidateId")).longValue();
+        auth.requireLeadOrSelf(req, candidateId);
         Candidate c = candidates.findById(candidateId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidate not found"));
         if (enrollments.findByTraining_IdAndCandidate_Id(id, candidateId).isPresent()) {
@@ -72,9 +79,11 @@ public class TrainingController {
     }
 
     @PutMapping("/enrollments/{id}")
-    public Enrollment updateEnrollment(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+    public Enrollment updateEnrollment(@PathVariable Long id, @RequestBody Map<String, Object> body,
+                                       HttpServletRequest req) {
         Enrollment e = enrollments.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Enrollment not found"));
+        auth.requireLeadOrSelf(req, e.getCandidate().getId());
         if (body.containsKey("status")) {
             e.setStatus(EnrollmentStatus.valueOf((String) body.get("status")));
         }

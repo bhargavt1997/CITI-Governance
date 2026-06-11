@@ -1,5 +1,6 @@
 package com.citi.governance.config;
 
+import com.citi.governance.auth.AuthService;
 import com.citi.governance.model.*;
 import com.citi.governance.repo.*;
 import org.springframework.boot.CommandLineRunner;
@@ -18,11 +19,52 @@ public class DataSeeder {
     @Bean
     CommandLineRunner seed(CandidateRepository candidates, StageHistoryRepository history,
                            TimesheetRepository timesheets, TrainingRepository trainings,
-                           EnrollmentRepository enrollments) {
+                           EnrollmentRepository enrollments, AppUserRepository users,
+                           AuthService auth) {
         return args -> {
-            if (candidates.count() > 0) {
-                return;
+            if (candidates.count() == 0) {
+                seedGovernanceData(candidates, history, timesheets, trainings, enrollments);
             }
+            if (users.count() == 0) {
+                seedUsers(users, candidates, auth);
+            }
+        };
+    }
+
+    /**
+     * Default password for all seeded accounts is "Citi@123".
+     * Leads: suresh.iyer@deloitte.com, anita.desai@deloitte.com.
+     * Every candidate gets a developer login under their own email.
+     */
+    private void seedUsers(AppUserRepository users, CandidateRepository candidates, AuthService auth) {
+        String defaultHash = auth.hash("Citi@123");
+
+        for (String[] lead : new String[][]{
+                {"Suresh Iyer", "suresh.iyer@deloitte.com"},
+                {"Anita Desai", "anita.desai@deloitte.com"}}) {
+            AppUser u = new AppUser();
+            u.setName(lead[0]);
+            u.setEmail(lead[1]);
+            u.setPasswordHash(defaultHash);
+            u.setRole(Role.LEAD);
+            users.save(u);
+        }
+
+        for (Candidate c : candidates.findAll()) {
+            AppUser u = new AppUser();
+            u.setName(c.getName());
+            u.setEmail(c.getEmail());
+            u.setPasswordHash(defaultHash);
+            u.setRole(Role.DEVELOPER);
+            u.setCandidateId(c.getId());
+            users.save(u);
+        }
+    }
+
+    private void seedGovernanceData(CandidateRepository candidates, StageHistoryRepository history,
+                                    TimesheetRepository timesheets, TrainingRepository trainings,
+                                    EnrollmentRepository enrollments) {
+        {
 
             String[][] people = {
                 // name, email, soeid, band, wave, pod, location, manager, stage, monthsAgoNominated
