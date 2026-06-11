@@ -1,23 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api, STAGES, STAGE_LABELS, DEVELOPER_BANDS, bandLabel } from '../api'
 import { useAuth } from '../auth'
 
-function Stepper({ stage }) {
-  const reached = STAGES.indexOf(stage)
-  return (
-    <div className="stepper">
-      {STAGES.map((s, i) => (
-        <div key={s} className={`step ${i < reached ? 'done' : ''} ${i === reached ? (s === 'ONBOARDED' ? 'done' : 'current') : ''}`}>
-          <div className="dot">{i < reached || s === stage && s === 'ONBOARDED' ? '✓' : i + 1}</div>
-          <div className="step-label">{STAGE_LABELS[s]}</div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 function AddCandidateModal({ onClose, onCreated, leadName }) {
-  const [form, setForm] = useState({ name: '', email: '', band: 'b5l', wave: 'Wave 3', pod: '', reportingManager: leadName })
+  const [form, setForm] = useState({ name: '', email: '', band: 'b6l', wave: 'Wave 3', pod: '', reportingManager: leadName })
   const [err, setErr] = useState(null)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
@@ -53,82 +40,111 @@ function AddCandidateModal({ onClose, onCreated, leadName }) {
   )
 }
 
+const initials = (name) => name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+
 export default function Onboarding() {
   const { user, isManager } = useAuth()
+  const navigate = useNavigate()
   const [candidates, setCandidates] = useState([])
-  const [expanded, setExpanded] = useState(null)
-  const [history, setHistory] = useState({})
   const [showAdd, setShowAdd] = useState(false)
   const [error, setError] = useState(null)
   const [toast, setToast] = useState(null)
+  const [dragId, setDragId] = useState(null)
+  const [dropStage, setDropStage] = useState(null)
 
-  const load = () => api.candidates().then(setCandidates).catch((e) => setError(e.message))
+  // The onboarding pipeline is for candidates being onboarded — managers are not part of it.
+  const load = () => api.candidates()
+    .then((cs) => setCandidates(cs.filter((c) => c.role !== 'MANAGER')))
+    .catch((e) => setError(e.message))
   useEffect(() => { load() }, [])
 
-  const toggle = async (id) => {
-    const next = expanded === id ? null : id
-    setExpanded(next)
-    if (next && !history[id]) {
-      try {
-        const h = await api.stageHistory(id)
-        setHistory((m) => ({ ...m, [id]: h }))
-      } catch { /* non-fatal */ }
+  const notify = (m, ms = 2500) => { setToast(m); setTimeout(() => setToast(null), ms) }
+
+  const moveTo = async (c, stage) => {
+    if (!c || stage === c.currentStage) return
+    // optimistic update
+    setCandidates((cs) => cs.map((x) => (x.id === c.id ? { ...x, currentStage: stage } : x)))
+    try {
+      await api.setStage(c.id, stage)
+      notify(`${c.name} → ${STAGE_LABELS[stage]} ✓`)
+    } catch (e) {
+      notify(e.message, 4000)
+      load() // revert to server truth
     }
   }
 
-  const changeStage = async (c, stage) => {
-    if (stage === c.currentStage) return
-    if (!confirm(`Change ${c.name}'s stage to "${STAGE_LABELS[stage]}"?`)) return
-    try {
-      await api.setStage(c.id, stage)
-      setHistory((m) => ({ ...m, [c.id]: undefined }))
-      load()
-      setToast(`${c.name} → ${STAGE_LABELS[stage]} ✓`)
-      setTimeout(() => setToast(null), 2500)
-    } catch (e) {
-      setToast(e.message)
-      setTimeout(() => setToast(null), 4000)
-    }
+  const onDrop = (stage) => {
+    const c = candidates.find((x) => x.id === dragId)
+    setDropStage(null)
+    setDragId(null)
+    moveTo(c, stage)
   }
+
+  const byStage = (s) => candidates.filter((c) => c.currentStage === s)
+  const onboardedCount = byStage('ONBOARDED').length
 
   return (
     <div>
       <h1 className="page-title">Onboarding Pipeline</h1>
       <p className="page-sub">
-        Track every candidate from nomination to onboarded. Click a row to expand the stage pipeline;
-        managers can set a candidate to any stage.
+        {isManager
+          ? 'Each column is a stage. Drag a candidate card to a new column to update their stage, or click a card to open the full profile.'
+          : 'Each column is a stage in the onboarding journey. Click a card to open the full profile.'}
       </p>
 
       {error && <div className="error-banner">{error}</div>}
 
       <div className="toolbar">
-        <span className="badge blue">{candidates.length} candidates</span>
-        <span className="badge green">{candidates.filter((c) => c.currentStage === 'ONBOARDED').length} onboarded</span>
+        <span className="badge blue">{candidates.length} in pipeline</span>
+        <span className="badge green">{onboardedCount} onboarded</span>
         <div className="spacer" />
         {isManager && <button className="btn" onClick={() => setShowAdd(true)}>+ Nominate Candidate</button>}
       </div>
 
-      <div className="card" style={{ padding: 0 }}>
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th><th>Employee ID</th><th>Band</th><th>Wave</th><th>Pod</th><th>Current Stage</th><th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {candidates.map((c) => (
-              <FragmentRow
-                key={c.id} c={c}
-                expanded={expanded === c.id}
-                history={history[c.id]}
-                canManage={isManager}
-                onToggle={() => toggle(c.id)}
-                onSetStage={(stage) => changeStage(c, stage)}
-              />
-            ))}
-          </tbody>
-        </table>
-        {candidates.length === 0 && <div className="empty">No candidates nominated yet.</div>}
+      <div className="kanban">
+        {STAGES.map((s) => {
+          const cards = byStage(s)
+          const done = s === 'ONBOARDED'
+          return (
+            <div
+              key={s}
+              className={`kan-col ${done ? 'done' : ''} ${dropStage === s ? 'drop' : ''}`}
+              onDragOver={isManager ? (e) => { e.preventDefault(); if (dropStage !== s) setDropStage(s) } : undefined}
+              onDragLeave={isManager ? () => setDropStage((p) => (p === s ? null : p)) : undefined}
+              onDrop={isManager ? () => onDrop(s) : undefined}
+            >
+              <div className="kan-col-head">
+                <span className="kan-col-title">{STAGE_LABELS[s]}</span>
+                <span className="kan-count">{cards.length}</span>
+              </div>
+              <div className="kan-cards">
+                {cards.map((c) => (
+                  <div
+                    key={c.id}
+                    className="kan-card"
+                    draggable={isManager}
+                    onDragStart={() => setDragId(c.id)}
+                    onDragEnd={() => { setDragId(null); setDropStage(null) }}
+                    onClick={() => navigate(`/profiles/${c.id}`)}
+                  >
+                    <div className="kc-top">
+                      <span className="kc-avatar">{initials(c.name)}</span>
+                      <span className="kc-name">{c.name}</span>
+                    </div>
+                    <div className="kc-meta">{c.pod || '—'} · {c.wave || '—'}</div>
+                    <div className="kc-tags">
+                      {c.band && <span className="badge gray">{bandLabel(c.band)}</span>}
+                      {c.soeid
+                        ? <span className="badge blue">{c.soeid}</span>
+                        : <span className="badge amber">SOEID pending</span>}
+                    </div>
+                  </div>
+                ))}
+                {cards.length === 0 && <div className="kan-empty">No candidates</div>}
+              </div>
+            </div>
+          )
+        })}
       </div>
 
       {showAdd && (
@@ -140,46 +156,5 @@ export default function Onboarding() {
       )}
       {toast && <div className="toast">{toast}</div>}
     </div>
-  )
-}
-
-function FragmentRow({ c, expanded, history, canManage, onToggle, onSetStage }) {
-  const isDone = c.currentStage === 'ONBOARDED'
-  return (
-    <>
-      <tr className="clickable" onClick={onToggle}>
-        <td><strong>{c.name}</strong><div style={{ fontSize: 11, color: 'var(--muted)' }}>{c.email}</div></td>
-        <td>{c.employeeId || '—'}</td>
-        <td>{c.band ? bandLabel(c.band) : '—'}</td>
-        <td>{c.wave || '—'}</td>
-        <td>{c.pod || '—'}</td>
-        <td><span className={`badge ${isDone ? 'green' : 'blue'}`}>{STAGE_LABELS[c.currentStage]}</span></td>
-        <td style={{ fontSize: 12, color: 'var(--muted)' }}>{expanded ? '▲' : '▼'}</td>
-      </tr>
-      {expanded && (
-        <tr>
-          <td colSpan={7} style={{ background: '#fafbfe' }}>
-            <Stepper stage={c.currentStage} />
-            <div className="ob-controls" onClick={(e) => e.stopPropagation()}>
-              {isDone && <span className="badge green">Fully onboarded {c.joinDate ? `· joined ${c.joinDate}` : ''}</span>}
-              {canManage && (
-                <label className="ob-stage-set">
-                  <span>Set stage</span>
-                  <select value={c.currentStage} onChange={(e) => onSetStage(e.target.value)}>
-                    {STAGES.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
-                  </select>
-                </label>
-              )}
-              {history && history.length > 0 && (
-                <span className="ob-lastupd">
-                  Last update: {STAGE_LABELS[history[history.length - 1].stage]} by {history[history.length - 1].completedBy}
-                  {' on '}{new Date(history[history.length - 1].completedAt).toLocaleDateString()}
-                </span>
-              )}
-            </div>
-          </td>
-        </tr>
-      )}
-    </>
   )
 }

@@ -298,34 +298,46 @@ select:focus, input:focus, textarea:focus {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ================= Onboarding stepper ================= */
-.stepper { display: flex; align-items: flex-start; gap: 0; overflow-x: auto; padding: 14px 4px 6px; }
-.step { display: flex; flex-direction: column; align-items: center; min-width: 112px; position: relative; text-align: center; }
-.step .dot {
-  width: 28px; height: 28px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 700;
-  background: #e8edf6; color: var(--faint); z-index: 1;
-  transition: background 0.2s;
+/* ================= Onboarding Kanban ================= */
+.kanban { display: flex; gap: 14px; overflow-x: auto; padding: 4px 2px 14px; align-items: flex-start; }
+.kan-col {
+  flex: 0 0 232px; background: #eef1f7; border: 1px solid var(--border);
+  border-radius: 14px; padding: 10px 10px 12px; display: flex; flex-direction: column;
+  transition: background 0.15s, box-shadow 0.15s, outline-color 0.15s;
+  outline: 2px dashed transparent; outline-offset: -2px;
 }
-.step.done .dot { background: var(--green); color: #fff; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.35); }
-.step.current .dot {
-  background: var(--blue); color: #fff;
-  outline: 4px solid rgba(37, 99, 235, 0.18);
-  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.4);
+.kan-col.done { background: var(--green-bg); }
+.kan-col.drop { outline-color: var(--accent); background: var(--accent-soft); }
+.kan-col-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 6px 12px; gap: 8px;
 }
-.step .step-label { font-size: 10.5px; margin-top: 7px; color: var(--faint); max-width: 102px; line-height: 1.35; font-weight: 500; }
-.step.done .step-label, .step.current .step-label { color: var(--ink); font-weight: 600; }
-.step:not(:last-child)::after {
-  content: ''; position: absolute; top: 14px; left: calc(50% + 14px); width: calc(100% - 28px);
-  height: 3px; background: #e8edf6; border-radius: 2px;
+.kan-col-title { font-size: 12px; font-weight: 700; color: var(--ink); letter-spacing: 0.1px; line-height: 1.25; }
+.kan-count {
+  flex-shrink: 0; background: #fff; border: 1px solid var(--border); color: var(--muted);
+  font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 9px; min-width: 24px; text-align: center;
 }
-.step.done:not(:last-child)::after { background: var(--green); }
-
-.ob-controls { display: flex; align-items: center; gap: 16px; padding: 12px 4px 4px; flex-wrap: wrap; }
-.ob-stage-set { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); font-weight: 600; }
-.ob-stage-set select { font-size: 13px; }
-.ob-lastupd { font-size: 12px; color: var(--muted); }
+.kan-col.done .kan-count { color: var(--green); border-color: #bfe6cd; }
+.kan-cards { display: flex; flex-direction: column; gap: 9px; min-height: 36px; }
+.kan-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 11px;
+  padding: 12px; cursor: pointer; box-shadow: var(--shadow-sm);
+  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+}
+.kan-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: #cdd9f0; }
+.kan-card[draggable="true"] { cursor: grab; }
+.kan-card[draggable="true"]:active { cursor: grabbing; }
+.kc-top { display: flex; align-items: center; gap: 9px; }
+.kc-avatar {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), #6aa0f6); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700;
+}
+.kc-name { font-size: 13.5px; font-weight: 700; line-height: 1.2; }
+.kc-meta { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+.kc-tags { display: flex; gap: 5px; margin-top: 9px; flex-wrap: wrap; }
+.kc-tags .badge { font-size: 10px; padding: 2.5px 7px; }
+.kan-empty { font-size: 12px; color: var(--faint); text-align: center; padding: 14px 0; }
 
 /* ================= Detail layouts ================= */
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
