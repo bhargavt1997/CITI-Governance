@@ -113,11 +113,10 @@ public class AuthController {
         c.setRole(role);
         c.setReportingManager(reportingManager);
         c.setBand(band);
+        // New registrations start in the NOMINATED stage by default.
+        c.setCurrentStage(OnboardingStage.NOMINATED);
         if (role == Role.MANAGER) {
-            c.setCurrentStage(OnboardingStage.ONBOARDED);
             c.setPod("Leadership");
-        } else {
-            c.setCurrentStage(OnboardingStage.NOMINATED);
         }
         Candidate saved = candidates.save(c);
 

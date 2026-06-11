@@ -32,7 +32,7 @@ export default function Dashboard() {
   const kpis = [
     { label: 'Total Candidates', value: summary.totalCandidates },
     { label: 'Newly Nominated', value: summary.nominated },
-    { label: 'CARAT Cleared', value: summary.caratCleared },
+    { label: 'KARAT Cleared', value: summary.caratCleared },
     { label: 'Total Selected', value: summary.totalSelected },
     { label: 'Onboarded', value: summary.onboarded },
     { label: 'PTS Awaiting Approval', value: summary.pendingApprovals ?? 0 },

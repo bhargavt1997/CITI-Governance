@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, Route, Routes, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { api } from './api'
 import { useAuth } from './auth'
 import Login from './pages/Login.jsx'
@@ -10,6 +10,7 @@ import Profiles from './pages/Profiles.jsx'
 import ProfileDetail from './pages/ProfileDetail.jsx'
 import Training from './pages/Training.jsx'
 import TrainingDetail from './pages/TrainingDetail.jsx'
+import KaratAssessment from './pages/KaratAssessment.jsx'
 
 const CRUMB_NAMES = {
   '': 'Dashboard',
@@ -17,6 +18,7 @@ const CRUMB_NAMES = {
   onboarding: 'Onboarding',
   profiles: 'Profiles',
   training: 'Training',
+  karat: 'KARAT Assessment',
 }
 
 function Breadcrumb() {
@@ -135,12 +137,8 @@ function UserMenu() {
   )
 }
 
-export default function App() {
-  const { user, booting } = useAuth()
-
-  if (booting) return <div className="boot-screen">Loading…</div>
-  if (!user) return <Login />
-
+function Shell() {
+  const { user } = useAuth()
   return (
     <div className="app">
       <aside className="sidebar">
@@ -154,6 +152,7 @@ export default function App() {
           <NavLink to="/onboarding">Onboarding</NavLink>
           <NavLink to="/profiles">Profiles</NavLink>
           <NavLink to="/training">Training</NavLink>
+          <NavLink to="/karat">KARAT Assessment</NavLink>
         </nav>
         <div className="sidebar-foot">
           Signed in as <strong>{user.name.split(' ')[0]}</strong> · {user.role === 'MANAGER' ? 'Manager' : 'Developer'}
@@ -166,17 +165,50 @@ export default function App() {
           <UserMenu />
         </header>
         <main className="content">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/pts" element={<Timesheet />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/profiles" element={<Profiles />} />
-            <Route path="/profiles/:id" element={<ProfileDetail />} />
-            <Route path="/training" element={<Training />} />
-            <Route path="/training/:id" element={<TrainingDetail />} />
-          </Routes>
+          <Outlet />
         </main>
       </div>
     </div>
+  )
+}
+
+function Booting() {
+  return <div className="boot-screen">Loading…</div>
+}
+
+/** Guards the authenticated app; sends unauthenticated users to /login, remembering where they were. */
+function RequireAuth() {
+  const { user, booting } = useAuth()
+  const loc = useLocation()
+  if (booting) return <Booting />
+  if (!user) return <Navigate to="/login" replace state={{ from: loc.pathname + loc.search }} />
+  return <Shell />
+}
+
+/** The login screen; if already authenticated, bounces to the originally requested page (or the dashboard). */
+function LoginRoute() {
+  const { user, booting } = useAuth()
+  const loc = useLocation()
+  if (booting) return <Booting />
+  if (user) return <Navigate to={loc.state?.from || '/'} replace />
+  return <Login />
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginRoute />} />
+      <Route element={<RequireAuth />}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/pts" element={<Timesheet />} />
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/profiles" element={<Profiles />} />
+        <Route path="/profiles/:id" element={<ProfileDetail />} />
+        <Route path="/training" element={<Training />} />
+        <Route path="/training/:id" element={<TrainingDetail />} />
+        <Route path="/karat" element={<KaratAssessment />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }

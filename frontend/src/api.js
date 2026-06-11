@@ -88,7 +88,7 @@ export const STAGES = [
 
 export const STAGE_LABELS = {
   NOMINATED: 'Nominated',
-  CARAT_INTERVIEW: 'CARAT Interview',
+  CARAT_INTERVIEW: 'KARAT Interview',
   CLIENT_INTERVIEW: 'Client Interview',
   FINAL_SELECTION: 'Final Selection',
   ONBOARDING_INITIATED: 'Onboarding Initiated',

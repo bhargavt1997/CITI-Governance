@@ -299,7 +299,15 @@ select:focus, input:focus, textarea:focus {
 }
 
 /* ================= Onboarding Kanban ================= */
-.kanban { display: flex; gap: 14px; overflow-x: auto; padding: 4px 2px 14px; align-items: flex-start; }
+.kanban {
+  display: flex; gap: 14px; overflow-x: auto; padding: 4px 2px 16px; align-items: flex-start;
+  scroll-snap-type: x proximity; scroll-behavior: smooth;
+}
+.kanban::-webkit-scrollbar { height: 10px; }
+.kanban::-webkit-scrollbar-thumb { background: #cdd6e6; border-radius: 6px; }
+.kanban::-webkit-scrollbar-thumb:hover { background: #b6c2da; }
+.kanban::-webkit-scrollbar-track { background: transparent; }
+.kanban .kan-col { scroll-snap-align: start; }
 .kan-col {
   flex: 0 0 232px; background: #eef1f7; border: 1px solid var(--border);
   border-radius: 14px; padding: 10px 10px 12px; display: flex; flex-direction: column;
@@ -362,6 +370,30 @@ select:focus, input:focus, textarea:focus {
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .training-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-weight: 500; }
+
+/* ================= KARAT Assessment ================= */
+.section-title { font-size: 15px; font-weight: 800; letter-spacing: -0.2px; margin: 26px 0 14px; color: var(--navy-900); }
+.karat-guide { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.karat-topic { padding: 16px 18px; }
+.karat-topic h4 { margin: 0 0 6px; font-size: 14px; font-weight: 700; color: var(--accent-dark); }
+.karat-topic p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
+.karat-qa { padding: 6px 8px; }
+.qa { border-bottom: 1px solid var(--border); }
+.qa:last-child { border-bottom: none; }
+.qa summary {
+  cursor: pointer; list-style: none; padding: 14px 8px; font-size: 13.5px; font-weight: 600;
+  color: var(--ink); display: flex; align-items: center; gap: 10px;
+}
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary::before {
+  content: '+'; flex-shrink: 0; width: 20px; height: 20px; border-radius: 6px;
+  background: var(--accent-soft); color: var(--accent-dark); font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 14px;
+  transition: transform 0.15s;
+}
+.qa[open] summary::before { content: '−'; }
+.qa summary:hover { color: var(--accent-dark); }
+.qa p { margin: 0 8px 16px 38px; font-size: 13px; color: var(--muted); line-height: 1.65; }
 
 /* ================= Modal ================= */
 .modal-backdrop {
