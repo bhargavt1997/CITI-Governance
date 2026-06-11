@@ -64,7 +64,7 @@ export default function Onboarding() {
         <div className="spacer" />
         {isSeniorManager && (
           <button className="btn secondary" onClick={() => navigate('/people')}>
-            Open Org Directory →
+            Open CITI Org Directory →
           </button>
         )}
       </div>

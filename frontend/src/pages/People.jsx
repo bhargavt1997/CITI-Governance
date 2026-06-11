@@ -66,7 +66,7 @@ export default function People() {
 
   return (
     <div>
-      <h1 className="page-title">Organization Directory</h1>
+      <h1 className="page-title">CITI Organization Directory</h1>
       <p className="page-sub">
         A complete view of everyone in the organisation and where they stand in onboarding.
       </p>
