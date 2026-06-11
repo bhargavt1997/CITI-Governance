@@ -1,0 +1,11 @@
+**/node_modules
+**/target
+**/dist
+.git
+.gitignore
+*.md
+**/*.log
+frontend/screenshot.mjs
+.claude
+.DS_Store
+**/.DS_Store

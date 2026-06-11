@@ -15,7 +15,7 @@ import People from './pages/People.jsx'
 
 const CRUMB_NAMES = {
   '': 'Dashboard',
-  pts: 'PTS — Timesheet',
+  pts: 'PTS',
   onboarding: 'Onboarding',
   profiles: 'My Team',
   training: 'Training',
@@ -150,7 +150,7 @@ function Shell() {
         </div>
         <nav>
           <NavLink to="/" end>Dashboard</NavLink>
-          <NavLink to="/pts">PTS — Timesheet</NavLink>
+          <NavLink to="/pts">PTS</NavLink>
           {isManager && <NavLink to="/onboarding">Onboarding</NavLink>}
           <NavLink to="/profiles">My Team</NavLink>
           <NavLink to="/training">Training</NavLink>

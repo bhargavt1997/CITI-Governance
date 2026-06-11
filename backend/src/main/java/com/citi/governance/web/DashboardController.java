@@ -2,6 +2,7 @@ package com.citi.governance.web;
 
 import com.citi.governance.model.Candidate;
 import com.citi.governance.model.OnboardingStage;
+import com.citi.governance.model.Role;
 import com.citi.governance.model.StageHistory;
 import com.citi.governance.model.Timesheet;
 import com.citi.governance.repo.CandidateRepository;
@@ -33,7 +34,11 @@ public class DashboardController {
 
     @GetMapping("/summary")
     public Map<String, Object> summary() {
-        List<Candidate> all = candidates.findAll();
+        // The funnel counts onboarding candidates only — managers are not part of the pipeline.
+        List<Candidate> all = candidates.findAll().stream()
+                .filter(c -> c.getRole() != Role.MANAGER)
+                .toList();
+        Set<Long> candidateIds = all.stream().map(Candidate::getId).collect(java.util.stream.Collectors.toSet());
 
         long total = all.size();
         long caratCleared = all.stream()
@@ -55,6 +60,7 @@ public class DashboardController {
         // Monthly trend: nominations and onboardings per month from the audit trail
         Map<String, long[]> trendByMonth = new TreeMap<>();
         for (StageHistory h : history.findAllByOrderByCompletedAtAsc()) {
+            if (h.getCandidate() == null || !candidateIds.contains(h.getCandidate().getId())) continue;
             String m = h.getCompletedAt().format(MONTH);
             long[] row = trendByMonth.computeIfAbsent(m, k -> new long[2]);
             if (h.getStage() == OnboardingStage.NOMINATED) row[0]++;

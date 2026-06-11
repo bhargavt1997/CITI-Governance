@@ -162,13 +162,13 @@ public class DataSeeder {
                 {"Arjun Mehta",    "arjun.mehta@deloitte.com",    "AM93211", "b8",  "Wave 1", "Payments",   "Hyderabad", "Suresh Iyer",  "ONBOARDED",               "5"},
                 {"Priya Sharma",   "priya.sharma@deloitte.com",   "PS84102", "b7",  "Wave 1", "Payments",   "Bengaluru", "Suresh Iyer",  "ONBOARDED",               "5"},
                 {"Rahul Verma",    "rahul.verma@deloitte.com",    "RV77345", "b8",  "Wave 1", "Cards",      "Pune",      "Anita Desai",  "ONBOARDED",               "4"},
-                {"Sneha Reddy",    "sneha.reddy@deloitte.com",    "SR66120", "b7",  "Wave 2", "Cards",      "Hyderabad", "Anita Desai",  "VDI_SETUP_IN_PROGRESS",   "3"},
+                {"Sneha Reddy",    "sneha.reddy@deloitte.com",    "SR66120", "b7",  "Wave 2", "Cards",      "Hyderabad", "Bhargav T",    "VDI_SETUP_IN_PROGRESS",   "3"},
                 {"Vikram Nair",    "vikram.nair@deloitte.com",    "VN55980", "b6l", "Wave 2", "Risk",       "Chennai",   "Suresh Iyer",  "CITI_CLEARANCE_RECEIVED", "3"},
                 {"Divya Krishnan", "divya.krishnan@deloitte.com", "DK44871", "b7",  "Wave 2", "Risk",       "Bengaluru", "Anita Desai",  "ONBOARDING_INITIATED",    "2"},
                 {"Karthik Rao",    "karthik.rao@deloitte.com",    "",        "b6l", "Wave 3", "Payments",   "Hyderabad", "Suresh Iyer",  "FINAL_SELECTION",         "2"},
                 {"Ananya Gupta",   "ananya.gupta@deloitte.com",   "",        "b6l", "Wave 3", "Cards",      "Mumbai",    "Anita Desai",  "CLIENT_INTERVIEW",        "1"},
-                {"Rohan Joshi",    "rohan.joshi@deloitte.com",    "",        "b7",  "Wave 3", "Risk",       "Pune",      "Suresh Iyer",  "CARAT_INTERVIEW",         "1"},
-                {"Meera Pillai",   "meera.pillai@deloitte.com",   "",        "b6l", "Wave 3", "Payments",   "Chennai",   "Anita Desai",  "NOMINATED",               "0"},
+                {"Rohan Joshi",    "rohan.joshi@deloitte.com",    "",        "b7",  "Wave 3", "Risk",       "Pune",      "Bhargav T",    "CARAT_INTERVIEW",         "1"},
+                {"Meera Pillai",   "meera.pillai@deloitte.com",   "",        "b6l", "Wave 3", "Payments",   "Chennai",   "Bhargav T",    "NOMINATED",               "0"},
             };
 
             int[][] skills = {

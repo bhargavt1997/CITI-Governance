@@ -189,7 +189,7 @@ export default function Timesheet() {
 
   return (
     <div>
-      <h1 className="page-title">PTS — Timesheet</h1>
+      <h1 className="page-title">PTS</h1>
       <p className="page-sub">
         {isManager
           ? 'Fill your own monthly hours, and review and approve the timesheets your direct reports submit.'

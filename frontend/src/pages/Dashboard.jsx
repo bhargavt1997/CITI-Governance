@@ -22,7 +22,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     Promise.all([api.dashboardSummary(), api.candidates()])
-      .then(([s, c]) => { setSummary(s); setCandidates(c) })
+      .then(([s, c]) => { setSummary(s); setCandidates(c.filter((x) => x.role !== 'MANAGER')) })
       .catch((e) => setError(e.message))
   }, [])
 

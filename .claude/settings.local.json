@@ -93,7 +93,8 @@
       "Bash(curl -s -o /dev/null -w \"  HTTP %{http_code}\\\\n\" -X POST http://localhost:8080/api/auth/register -H 'Content-Type: application/json' -d '{\"name\":\"M4\",\"email\":\"t2@deloitte.com\",\"password\":\"Citi@123\",\"role\":\"MANAGER\",\"band\":\"b4l\",\"reportingManager\":\"Suresh Iyer\"}')",
       "Bash(curl -s -o /dev/null -w \"  HTTP %{http_code}\\\\n\" -X POST http://localhost:8080/api/auth/register -H 'Content-Type: application/json' -d '{\"name\":\"D8\",\"email\":\"t3@deloitte.com\",\"password\":\"Citi@123\",\"role\":\"DEVELOPER\",\"band\":\"b8\"}')",
       "Bash(python3 -c 'import sys,json;u=json.load\\(sys.stdin\\)[\"user\"];print\\(\"  role:\",u[\"role\"],\"| band:\",u.get\\(\"band\"\\),\"| name:\",u[\"name\"]\\)')",
-      "Bash(python3 -c 'import sys,json;u=json.load\\(sys.stdin\\)[\"user\"];print\\(\"  role:\",u[\"role\"],\"| band:\",u.get\\(\"band\"\\)\\)')"
+      "Bash(python3 -c 'import sys,json;u=json.load\\(sys.stdin\\)[\"user\"];print\\(\"  role:\",u[\"role\"],\"| band:\",u.get\\(\"band\"\\)\\)')",
+      "Bash(python3 -c 'import sys,json;d=json.load\\(sys.stdin\\);print\\(\"totalCandidates:\",d[\"totalCandidates\"],\"| onboarded:\",d[\"onboarded\"],\"| nominated:\",d[\"nominated\"],\"| caratCleared:\",d[\"caratCleared\"]\\)')"
     ]
   }
 }
