@@ -9,8 +9,7 @@ export default function KaratAssessment() {
     <div>
       <h1 className="page-title">KARAT Assessment Prep</h1>
       <p className="page-sub">
-        Role-specific study material to prepare for the KARAT assessment. Pick your track for a focused
-        guide of the key topics and practice questions with answers.
+        Role-based preparation for the KARAT assessment — the concepts that matter and practice questions for each track.
       </p>
 
       <div className="tabs">

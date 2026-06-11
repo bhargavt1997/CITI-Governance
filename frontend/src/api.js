@@ -1,4 +1,6 @@
-const BASE = '/api'
+// Same-origin '/api' by default (local dev proxy + the single Docker image). For a split deploy
+// (e.g. frontend on GitHub Pages), set VITE_API_BASE_URL to the backend, e.g. https://api.example.com/api
+const BASE = import.meta.env.VITE_API_BASE_URL || '/api'
 
 let onAuthFailure = null
 export const setAuthFailureHandler = (fn) => { onAuthFailure = fn }

@@ -28,8 +28,13 @@ public class SpaConfig implements WebMvcConfigurer {
                         if (requested.exists() && requested.isReadable()) {
                             return requested;
                         }
-                        // Don't swallow API routes — let them 404 normally.
-                        if (resourcePath.startsWith("api/")) {
+                        // Don't swallow API or API-docs/Swagger routes — let their own handlers serve them.
+                        if (resourcePath.startsWith("api/")
+                                || resourcePath.startsWith("v3/")
+                                || resourcePath.startsWith("swagger-ui")
+                                || resourcePath.startsWith("webjars/")
+                                || resourcePath.startsWith("swagger-resources")
+                                || resourcePath.startsWith("actuator")) {
                             return null;
                         }
                         Resource index = new ClassPathResource("/static/index.html");

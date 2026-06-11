@@ -39,7 +39,7 @@ export default function People() {
     <div>
       <h1 className="page-title">Organization Directory</h1>
       <p className="page-sub">
-        Everyone registered in the platform with their onboarding status — search and open any profile.
+        A complete view of everyone in the organisation and where they stand in onboarding.
       </p>
 
       {error && <div className="error-banner">{error}</div>}

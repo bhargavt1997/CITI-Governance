@@ -25,10 +25,10 @@ export default function Profiles() {
       <h1 className="page-title">My Team</h1>
       <p className="page-sub">
         {isManager
-          ? 'Your direct reportees — click anyone to open their full profile, skills and trainings.'
+          ? 'The people who report to you and where each of them stands.'
           : teamManager
-            ? <>Everyone reporting to <strong>{teamManager}</strong> — click a teammate to view their profile.</>
-            : 'You are not assigned to a reporting manager yet.'}
+            ? <>Your team — everyone who reports to <strong>{teamManager}</strong>.</>
+            : 'You haven\'t been assigned to a reporting manager yet.'}
       </p>
 
       {error && <div className="error-banner">{error}</div>}

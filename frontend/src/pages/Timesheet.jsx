@@ -192,8 +192,8 @@ export default function Timesheet() {
       <h1 className="page-title">PTS</h1>
       <p className="page-sub">
         {isManager
-          ? 'Fill your own monthly hours, and review and approve the timesheets your direct reports submit.'
-          : 'Fill your weekly hours for the month and submit — your reporting manager will review and approve it.'}
+          ? 'Your monthly project hours, alongside the timesheets awaiting your approval.'
+          : 'Your monthly project hours, submitted for your manager\'s approval.'}
       </p>
 
       {error && <div className="error-banner">{error}</div>}

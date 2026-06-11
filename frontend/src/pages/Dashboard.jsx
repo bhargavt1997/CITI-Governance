@@ -45,7 +45,7 @@ export default function Dashboard() {
   return (
     <div>
       <h1 className="page-title">Dashboard</h1>
-      <p className="page-sub">Governance at a glance — candidate funnel, monthly trends and PTS hours.</p>
+      <p className="page-sub">A snapshot of your team's onboarding progress, hiring trends and project hours.</p>
 
       <div className="grid kpis">
         {kpis.map((k) => (

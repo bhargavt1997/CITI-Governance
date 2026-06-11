@@ -94,9 +94,7 @@ export default function Onboarding() {
     <div>
       <h1 className="page-title">Onboarding Pipeline</h1>
       <p className="page-sub">
-        {isManager
-          ? 'Each row is a stage. Drag a candidate into another stage to update it, or click a card to open the full profile.'
-          : 'Each row is a stage in the onboarding journey. Click a card to open the full profile.'}
+        Where each of your team members stands on the journey from nomination to fully onboarded.
       </p>
 
       {error && <div className="error-banner">{error}</div>}

@@ -53,8 +53,7 @@ export default function Training() {
     <div>
       <h1 className="page-title">Training & Certifications</h1>
       <p className="page-sub">
-        Catalog of certifications published by managers. Click a card to see enrolled candidates
-        and their progress; managers can add new certifications.
+        Certifications and learning tracks for the team, with live enrolment and progress.
       </p>
 
       {error && <div className="error-banner">{error}</div>}
