@@ -240,6 +240,7 @@ select:focus, input:focus, textarea:focus {
 
 .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
 .toolbar .spacer { flex: 1; }
+.dir-search { width: 320px; max-width: 100%; }
 
 .btn.danger { background: #fff; color: var(--red); border: 1px solid #f3c9c9; box-shadow: none; }
 .btn.danger:hover { background: var(--red-bg); filter: none; box-shadow: none; }

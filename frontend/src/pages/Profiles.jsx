@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { api, STAGE_LABELS, bandLabel } from '../api'
 import { useAuth } from '../auth'
 
@@ -13,21 +13,29 @@ export default function Profiles() {
     api.candidates().then(setCandidates).catch((e) => setError(e.message))
   }, [])
 
-  // Profiles is a manager feature; developers reach their own profile via "My Profile".
-  if (!isManager) return <Navigate to="/" replace />
-
-  // Show only the manager's direct reportees.
-  const reportees = candidates.filter((c) => c.reportingManager === user.name)
+  // My Team is open to everyone:
+  //  - managers see their direct reportees
+  //  - developers see everyone who reports to the same manager (their peers)
+  const me = candidates.find((c) => c.id === user.candidateId)
+  const teamManager = isManager ? user.name : (me?.reportingManager || null)
+  const team = teamManager ? candidates.filter((c) => c.reportingManager === teamManager) : []
 
   return (
     <div>
       <h1 className="page-title">My Team</h1>
-      <p className="page-sub">Your direct reportees — click anyone to open their full profile, skills and trainings.</p>
+      <p className="page-sub">
+        {isManager
+          ? 'Your direct reportees — click anyone to open their full profile, skills and trainings.'
+          : teamManager
+            ? <>Everyone reporting to <strong>{teamManager}</strong> — click a teammate to view their profile.</>
+            : 'You are not assigned to a reporting manager yet.'}
+      </p>
 
       {error && <div className="error-banner">{error}</div>}
 
       <div className="toolbar">
-        <span className="badge blue">{reportees.length} reportee{reportees.length === 1 ? '' : 's'}</span>
+        <span className="badge blue">{team.length} {team.length === 1 ? 'member' : 'members'}</span>
+        {!isManager && <span className="badge gray">View only · managers can edit</span>}
       </div>
 
       <div className="card" style={{ padding: 0 }}>
@@ -36,9 +44,13 @@ export default function Profiles() {
             <tr><th>Name</th><th>Band</th><th>SOEID</th><th>Location</th><th>Pod</th><th>Stage</th><th>Join Date</th></tr>
           </thead>
           <tbody>
-            {reportees.map((c) => (
+            {team.map((c) => (
               <tr key={c.id} className="clickable" onClick={() => navigate(`/profiles/${c.id}`)}>
-                <td><strong>{c.name}</strong><div style={{ fontSize: 11, color: 'var(--muted)' }}>{c.email}</div></td>
+                <td>
+                  <strong>{c.name}</strong>
+                  {c.id === user.candidateId && <span className="badge blue" style={{ marginLeft: 6 }}>You</span>}
+                  <div style={{ fontSize: 11, color: 'var(--muted)' }}>{c.email}</div>
+                </td>
                 <td>{c.band ? bandLabel(c.band) : '—'}</td>
                 <td>{c.soeid || '—'}</td>
                 <td>{c.location || '—'}</td>
@@ -49,7 +61,7 @@ export default function Profiles() {
             ))}
           </tbody>
         </table>
-        {reportees.length === 0 && <div className="empty">You have no direct reportees yet.</div>}
+        {team.length === 0 && <div className="empty">No teammates to show yet.</div>}
       </div>
     </div>
   )

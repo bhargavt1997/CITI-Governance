@@ -17,10 +17,10 @@ const CRUMB_NAMES = {
   '': 'Dashboard',
   pts: 'PTS — Timesheet',
   onboarding: 'Onboarding',
-  profiles: 'Profiles',
+  profiles: 'My Team',
   training: 'Training',
   karat: 'KARAT Assessment',
-  people: 'All People',
+  people: 'Org Directory',
 }
 
 function Breadcrumb() {
@@ -151,11 +151,11 @@ function Shell() {
         <nav>
           <NavLink to="/" end>Dashboard</NavLink>
           <NavLink to="/pts">PTS — Timesheet</NavLink>
-          <NavLink to="/onboarding">Onboarding</NavLink>
-          {isManager && <NavLink to="/profiles">Profiles</NavLink>}
+          {isManager && <NavLink to="/onboarding">Onboarding</NavLink>}
+          <NavLink to="/profiles">My Team</NavLink>
           <NavLink to="/training">Training</NavLink>
           <NavLink to="/karat">KARAT Assessment</NavLink>
-          {isSeniorManager && <NavLink to="/people">All People</NavLink>}
+          {isSeniorManager && <NavLink to="/people">Org Directory</NavLink>}
         </nav>
         <div className="sidebar-foot">
           Signed in as <strong>{user.name.split(' ')[0]}</strong> · {roleLabel}

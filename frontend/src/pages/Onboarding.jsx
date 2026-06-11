@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { api, STAGES, STAGE_LABELS, DEVELOPER_BANDS, bandLabel } from '../api'
 import { useAuth } from '../auth'
 
@@ -52,17 +52,12 @@ export default function Onboarding() {
   const [dragId, setDragId] = useState(null)
   const [dropStage, setDropStage] = useState(null)
 
-  // The onboarding pipeline is for candidates being onboarded — managers are not part of it.
-  // Scope: senior managers see everyone; regular managers see their reportees; developers see only themselves.
+  // Managers/senior managers only; the board shows their direct reportees.
+  // (Senior managers can see everyone via the Org Directory.)
   const load = () => api.candidates()
     .then((cs) => {
       const devs = cs.filter((c) => c.role !== 'MANAGER')
-      const scoped = isSeniorManager
-        ? devs
-        : isManager
-          ? devs.filter((c) => c.reportingManager === user.name)
-          : devs.filter((c) => c.id === user.candidateId)
-      setCandidates(scoped)
+      setCandidates(devs.filter((c) => c.reportingManager === user.name))
     })
     .catch((e) => setError(e.message))
   useEffect(() => { load() }, [])
@@ -92,6 +87,9 @@ export default function Onboarding() {
   const byStage = (s) => candidates.filter((c) => c.currentStage === s)
   const onboardedCount = byStage('ONBOARDED').length
 
+  // Onboarding is a manager/senior-manager feature.
+  if (!isManager) return <Navigate to="/" replace />
+
   return (
     <div>
       <h1 className="page-title">Onboarding Pipeline</h1>
@@ -109,7 +107,7 @@ export default function Onboarding() {
         <div className="spacer" />
         {isSeniorManager && (
           <button className="btn secondary" onClick={() => navigate('/people')}>
-            View all registered people →
+            Open Org Directory →
           </button>
         )}
         {isManager && <button className="btn" onClick={() => setShowAdd(true)}>+ Nominate Candidate</button>}

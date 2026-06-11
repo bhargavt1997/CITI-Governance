@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { api, STAGE_LABELS, bandLabel } from '../api'
 import { useAuth } from '../auth'
@@ -13,11 +13,21 @@ export default function People() {
   const { isSeniorManager } = useAuth()
   const [people, setPeople] = useState([])
   const [error, setError] = useState(null)
+  const [q, setQ] = useState('')
   const navigate = useNavigate()
 
   useEffect(() => {
     api.candidates().then(setPeople).catch((e) => setError(e.message))
   }, [])
+
+  const filtered = useMemo(() => {
+    const term = q.trim().toLowerCase()
+    if (!term) return people
+    return people.filter((c) => [
+      c.name, c.email, c.soeid, c.reportingManager, c.pod, c.location,
+      c.band, roleText(c), STAGE_LABELS[c.currentStage],
+    ].some((v) => v && String(v).toLowerCase().includes(term)))
+  }, [people, q])
 
   // Gate: only senior managers may view the full directory.
   if (!isSeniorManager) return <Navigate to="/" replace />
@@ -27,9 +37,9 @@ export default function People() {
 
   return (
     <div>
-      <h1 className="page-title">All Registered People</h1>
+      <h1 className="page-title">Organization Directory</h1>
       <p className="page-sub">
-        Full directory of everyone registered in the platform with their onboarding status — visible to senior managers.
+        Everyone registered in the platform with their onboarding status — search and open any profile.
       </p>
 
       {error && <div className="error-banner">{error}</div>}
@@ -38,6 +48,14 @@ export default function People() {
         <span className="badge blue">{people.length} people</span>
         <span className="badge gray">{managers} managers</span>
         <span className="badge green">{onboarded} onboarded</span>
+        <div className="spacer" />
+        <input
+          type="text"
+          className="dir-search"
+          placeholder="Search name, email, manager, pod, band…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
       </div>
 
       <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
@@ -49,14 +67,10 @@ export default function People() {
             </tr>
           </thead>
           <tbody>
-            {people.map((c) => (
+            {filtered.map((c) => (
               <tr key={c.id} className="clickable" onClick={() => navigate(`/profiles/${c.id}`)}>
                 <td><strong>{c.name}</strong><div style={{ fontSize: 11, color: 'var(--muted)' }}>{c.email}</div></td>
-                <td>
-                  <span className={`badge ${c.role === 'MANAGER' ? 'blue' : 'gray'}`}>
-                    {roleText(c)}
-                  </span>
-                </td>
+                <td><span className={`badge ${c.role === 'MANAGER' ? 'blue' : 'gray'}`}>{roleText(c)}</span></td>
                 <td>{c.band ? bandLabel(c.band) : '—'}</td>
                 <td>{c.reportingManager || '—'}</td>
                 <td><span className={`badge ${stageBadge(c.currentStage)}`}>{STAGE_LABELS[c.currentStage]}</span></td>
@@ -67,7 +81,9 @@ export default function People() {
             ))}
           </tbody>
         </table>
-        {people.length === 0 && !error && <div className="empty">No registered people yet.</div>}
+        {filtered.length === 0 && (
+          <div className="empty">{q ? `No people match “${q}”.` : 'No registered people yet.'}</div>
+        )}
       </div>
     </div>
   )
