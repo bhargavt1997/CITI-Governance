@@ -68,6 +68,8 @@ public class PodController {
         pod.setName(name.toUpperCase());
         pod.setLeadName(lead.getName());
         pod.setLeadEmail(lead.getEmail());
+        String citiLeader = body.get("citiLeader");
+        if (citiLeader != null && !citiLeader.isBlank()) pod.setCitiLeader(citiLeader.trim());
         return pods.save(pod);
     }
 }

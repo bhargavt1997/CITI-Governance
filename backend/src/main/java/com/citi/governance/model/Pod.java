@@ -22,6 +22,9 @@ public class Pod {
     private String leadName;
     private String leadEmail;
 
+    /** The CITI (client-side) leadership owner for this pod, e.g. Gonzalo or Joshua. */
+    private String citiLeader;
+
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public Long getId() { return id; }
@@ -32,6 +35,8 @@ public class Pod {
     public void setLeadName(String leadName) { this.leadName = leadName; }
     public String getLeadEmail() { return leadEmail; }
     public void setLeadEmail(String leadEmail) { this.leadEmail = leadEmail; }
+    public String getCitiLeader() { return citiLeader; }
+    public void setCitiLeader(String citiLeader) { this.citiLeader = citiLeader; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

@@ -26,13 +26,16 @@ public class CandidateController {
     private final CandidateRepository candidates;
     private final StageHistoryRepository history;
     private final AppUserRepository users;
+    private final com.citi.governance.repo.PodRepository pods;
     private final AuthService auth;
 
     public CandidateController(CandidateRepository candidates, StageHistoryRepository history,
-                               AppUserRepository users, AuthService auth) {
+                               AppUserRepository users, com.citi.governance.repo.PodRepository pods,
+                               AuthService auth) {
         this.candidates = candidates;
         this.history = history;
         this.users = users;
+        this.pods = pods;
         this.auth = auth;
     }
 
@@ -124,7 +127,9 @@ public class CandidateController {
                     }
                     c.setReportingManager(mgr.getName());
                 }
-                c.setCitiLeadership(strOrNull(row.get("citiLeadership")));
+                // CITI leadership follows the project's CITI owner (CSV value is a fallback).
+                String podCiti = pods.findByNameIgnoreCase(pod).map(pp -> pp.getCitiLeader()).orElse(null);
+                c.setCitiLeadership(podCiti != null && !podCiti.isBlank() ? podCiti : strOrNull(row.get("citiLeadership")));
                 c.setWave(strOrNull(row.get("wave")));
                 c.setPod(pod);
                 c.setLocation(strOrNull(row.get("location")));

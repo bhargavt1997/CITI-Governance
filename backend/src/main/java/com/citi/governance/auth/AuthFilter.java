@@ -28,8 +28,9 @@ public class AuthFilter extends OncePerRequestFilter {
         if (path.startsWith("/api/auth/login")) return true;
         if (path.startsWith("/api/auth/register")) return true;
         if (path.startsWith("/api/auth/managers")) return true;
-        // The project (pod) list is public so the registration form can offer it; creating is protected.
+        // The project (pod) + CITI-leader lists are public so the registration form can offer them; creating is protected.
         if (path.equals("/api/pods") && "GET".equalsIgnoreCase(request.getMethod())) return true;
+        if (path.equals("/api/citi-leaders") && "GET".equalsIgnoreCase(request.getMethod())) return true;
         return "OPTIONS".equalsIgnoreCase(request.getMethod());
     }
 

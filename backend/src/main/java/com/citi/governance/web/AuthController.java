@@ -28,13 +28,16 @@ public class AuthController {
     private final AppUserRepository users;
     private final CandidateRepository candidates;
     private final StageHistoryRepository history;
+    private final com.citi.governance.repo.PodRepository pods;
 
     public AuthController(AuthService auth, AppUserRepository users,
-                          CandidateRepository candidates, StageHistoryRepository history) {
+                          CandidateRepository candidates, StageHistoryRepository history,
+                          com.citi.governance.repo.PodRepository pods) {
         this.auth = auth;
         this.users = users;
         this.candidates = candidates;
         this.history = history;
+        this.pods = pods;
     }
 
     @PostMapping("/login")
@@ -83,6 +86,8 @@ public class AuthController {
         String band = trimToNull(body.get("band"));
         String pod = trimToNull(body.get("pod"));
         String citiLeadership = trimToNull(body.get("citiLeadership"));
+        String wave = trimToNull(body.get("wave"));
+        String location = trimToNull(body.get("location"));
 
         if (name.isBlank() || email.isBlank() || password.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name, email and password are required");
@@ -129,7 +134,11 @@ public class AuthController {
         c.setReportingManager(reportingManager);
         c.setBand(band);
         c.setPod(pod);
-        c.setCitiLeadership(citiLeadership);
+        // CITI leadership is derived from the chosen project's CITI owner (falls back to any provided value).
+        String podCiti = pods.findByNameIgnoreCase(pod).map(p -> p.getCitiLeader()).orElse(null);
+        c.setCitiLeadership(podCiti != null && !podCiti.isBlank() ? podCiti : citiLeadership);
+        c.setWave(wave);
+        c.setLocation(location);
         // New registrations start in the NOMINATED stage by default.
         c.setCurrentStage(OnboardingStage.NOMINATED);
         Candidate saved = candidates.save(c);

@@ -22,7 +22,8 @@ public class DataSeeder {
     CommandLineRunner seed(CandidateRepository candidates, StageHistoryRepository history,
                            TimesheetRepository timesheets, TrainingRepository trainings,
                            EnrollmentRepository enrollments, AppUserRepository users,
-                           PodRepository pods, AuthService auth, JdbcTemplate jdbc) {
+                           PodRepository pods, CitiLeaderRepository citiLeaders,
+                           AuthService auth, JdbcTemplate jdbc) {
         return args -> {
             // The LEAD role was renamed to MANAGER - migrate any pre-existing rows before they are mapped.
             migrateLeadRole(jdbc);
@@ -40,8 +41,12 @@ public class DataSeeder {
             ensureDemoPeople(candidates, history, users, auth);
             // Demo org mappings (run after manager candidate records exist).
             applyDemoOrg(jdbc);
-            // Seed the delivery projects (pods) with senior-management leads.
+            // Seed the delivery projects (pods) with senior-management leads + CITI owners.
             ensurePods(pods);
+            // Seed the CITI (client-side) leadership owners.
+            ensureCitiLeaders(citiLeaders);
+            // Derive each person's CITI leadership from their pod's CITI owner.
+            syncCitiByPod(pods, jdbc);
             // Seed a few months of delivery metrics for onboarded people so the GT Metrics page isn't empty.
             seedMetrics(jdbc);
         };
@@ -94,6 +99,10 @@ public class DataSeeder {
         // Everyone is tied to a project (RUBY / HY / MES) via pod. Idempotent: only fills non-project pods.
         jdbc.update("UPDATE candidates SET pod = CASE (id % 3) WHEN 0 THEN 'RUBY' WHEN 1 THEN 'HY' ELSE 'MES' END "
                 + "WHERE pod IS NULL OR pod NOT IN ('RUBY','HY','MES')");
+        // A pod lead sits in the pod they lead: RUBY=Jitendr, HY=Atul, MES=Shubhi.
+        jdbc.update("UPDATE candidates SET pod = 'RUBY' WHERE email = 'jitendrkumar@deloitte.com'");
+        jdbc.update("UPDATE candidates SET pod = 'HY' WHERE email = 'aturaj@deloitte.com'");
+        jdbc.update("UPDATE candidates SET pod = 'MES' WHERE email = 'shubhigupta7@deloitte.com'");
         // The CEO reports to no one.
         jdbc.update("UPDATE candidates SET reporting_manager = NULL WHERE email = 'ssrinagakedar@deloitte.com'");
         // Assign a CITI leadership owner (Gonzalo / Joshua) to everyone - split by id, fill only blanks.
@@ -242,21 +251,39 @@ public class DataSeeder {
      * Idempotently seed a fixed set of demo people (Atul Raj's team). Each row creates a Candidate +
      * linked login if the email doesn't already exist. Band sets the role; project goes in pod.
      */
-    /** Seed the three delivery projects with senior-management leads. Idempotent. */
+    /** Seed the three delivery projects with senior-management leads + CITI owners, keeping them current. Idempotent. */
     private void ensurePods(PodRepository pods) {
-        // name, leadName, leadEmail
+        // name, leadName, leadEmail, citiLeader
         String[][] seed = {
-            {"RUBY", "Atul Raj",      "aturaj@deloitte.com"},
-            {"HY",   "Jitendr Kumar", "jitendrkumar@deloitte.com"},
-            {"MES",  "Shubhi Gupta",  "shubhigupta7@deloitte.com"},
+            {"RUBY", "Jitendr Kumar", "jitendrkumar@deloitte.com", "Joshua"},
+            {"HY",   "Atul Raj",      "aturaj@deloitte.com",       "Gonzalo"},
+            {"MES",  "Shubhi Gupta",  "shubhigupta7@deloitte.com", "Gonzalo"},
         };
         for (String[] s : seed) {
-            if (pods.existsByNameIgnoreCase(s[0])) continue;
-            Pod p = new Pod();
+            Pod p = pods.findByNameIgnoreCase(s[0]).orElseGet(Pod::new);
             p.setName(s[0]);
             p.setLeadName(s[1]);
             p.setLeadEmail(s[2]);
+            p.setCitiLeader(s[3]);
             pods.save(p);
+        }
+    }
+
+    /** A person's CITI leadership is derived from the CITI owner of their pod (keeps the two consistent). */
+    private void syncCitiByPod(PodRepository pods, JdbcTemplate jdbc) {
+        for (Pod p : pods.findAll()) {
+            if (p.getCitiLeader() == null || p.getCitiLeader().isBlank()) continue;
+            jdbc.update("UPDATE candidates SET citi_leadership = ? WHERE pod = ?", p.getCitiLeader(), p.getName());
+        }
+    }
+
+    /** Seed the default CITI leadership owners. Idempotent. */
+    private void ensureCitiLeaders(CitiLeaderRepository leaders) {
+        for (String name : new String[]{"Gonzalo", "Joshua"}) {
+            if (leaders.existsByNameIgnoreCase(name)) continue;
+            CitiLeader l = new CitiLeader();
+            l.setName(name);
+            leaders.save(l);
         }
     }
 

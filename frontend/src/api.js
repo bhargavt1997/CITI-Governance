@@ -74,6 +74,10 @@ export const api = {
   pods: () => request('/pods'),
   createPod: (data) => request('/pods', { method: 'POST', body: JSON.stringify(data) }),
 
+  // CITI leadership owners
+  citiLeaders: () => request('/citi-leaders'),
+  createCitiLeader: (name) => request('/citi-leaders', { method: 'POST', body: JSON.stringify({ name }) }),
+
   // Trainings
   trainings: () => request('/trainings'),
   training: (id) => request(`/trainings/${id}`),

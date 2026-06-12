@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { api, ALL_BANDS, bandLabel, bandRank, roleForBand, CITI_LEADERS } from '../api'
+import { api, ALL_BANDS, bandLabel, bandRank, roleForBand } from '../api'
 import { useAuth } from '../auth'
 
 export default function Login() {
@@ -11,7 +11,8 @@ export default function Login() {
   const [band, setBand] = useState(ALL_BANDS[0])
   const [reportingManager, setReportingManager] = useState('')
   const [pod, setPod] = useState('')
-  const [citiLeadership, setCitiLeadership] = useState('')
+  const [wave, setWave] = useState('')
+  const [location, setLocation] = useState('')
   const [managers, setManagers] = useState([])
   const [pods, setPods] = useState([])
   const [error, setError] = useState(null)
@@ -29,6 +30,9 @@ export default function Login() {
       api.pods().then(setPods).catch(() => setPods([]))
     }
   }, [mode])
+
+  // CITI leadership is determined by the chosen project's CITI owner.
+  const derivedCiti = pods.find((p) => p.name === pod)?.citiLeader || ''
 
   // If the chosen manager is no longer senior enough after a band change, drop the selection.
   useEffect(() => {
@@ -55,7 +59,9 @@ export default function Login() {
           band,
           reportingManager: reportingManager || null,
           pod,
-          citiLeadership: citiLeadership || null,
+          citiLeadership: derivedCiti || null,
+          wave: wave || null,
+          location: location || null,
         })
       }
     } catch (err) {
@@ -131,10 +137,14 @@ export default function Login() {
             </select>
 
             <label className="login-label">CITI leadership</label>
-            <select value={citiLeadership} onChange={(e) => setCitiLeadership(e.target.value)}>
-              <option value="">Select CITI leader…</option>
-              {CITI_LEADERS.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <input type="text" value={derivedCiti || 'Set by your project'} disabled readOnly />
+            <span className="login-help">Determined by the project you join.</span>
+
+            <label className="login-label">Wave</label>
+            <input type="text" value={wave} onChange={(e) => setWave(e.target.value)} placeholder="e.g. Wave 4" />
+
+            <label className="login-label">Location</label>
+            <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Hyderabad" />
           </>
         )}
 

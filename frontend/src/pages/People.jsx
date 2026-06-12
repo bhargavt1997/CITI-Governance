@@ -5,7 +5,6 @@ import { useAuth } from '../auth'
 import { useToast } from '../toast'
 
 const stageBadge = (stage) => (stage === 'ONBOARDED' ? 'green' : stage === 'KARAT_FAILED' ? 'red' : stage === 'OFFBOARDING' ? 'amber' : stage === 'OFFBOARDED' ? 'gray' : stage === 'NOMINATED' ? 'gray' : 'blue')
-const stageDot = (stage) => (stage === 'ONBOARDED' ? 'var(--green)' : stage === 'KARAT_FAILED' ? 'var(--red)' : stage === 'OFFBOARDING' ? 'var(--amber)' : stage === 'OFFBOARDED' ? 'var(--faint)' : stage === 'NOMINATED' ? 'var(--faint)' : 'var(--accent)')
 const SENIOR_BANDS = ['b5l', 'b5h', 'b4l', 'b4h']
 const roleText = (c) => (c.role === 'MANAGER'
   ? (SENIOR_BANDS.includes(c.band) ? 'Senior Manager' : 'Manager')
@@ -196,6 +195,7 @@ export default function People() {
   const [error, setError] = useState(null)
   const [q, setQ] = useState('')
   const [stage, setStage] = useState(null) // selected stage filter
+  const [project, setProject] = useState(null) // selected project (pod) filter
   const [preset, setPreset] = useState(null) // filter passed in from a dashboard KPI
   const [showImport, setShowImport] = useState(false)
   const navigate = useNavigate()
@@ -214,12 +214,18 @@ export default function People() {
     else { setStage(null); setPreset(null) } // 'all'
   }, [location.key])
 
-  // Stage counts over the full directory (independent of the search box).
+  // Stage counts over the full directory (shown in the stage dropdown).
   const stageCount = useMemo(() => {
     const counts = {}
     for (const c of people) counts[c.currentStage] = (counts[c.currentStage] || 0) + 1
     return counts
   }, [people])
+
+  // Distinct projects (pods) present, for the project dropdown.
+  const projects = useMemo(
+    () => [...new Set(people.map((c) => c.pod).filter(Boolean))].sort(),
+    [people],
+  )
 
   // A preset filter (from a dashboard KPI) matches by stage list, pipeline membership, or an id list.
   const matchesPreset = (c) => {
@@ -237,18 +243,17 @@ export default function People() {
     return people.filter((c) => {
       if (!matchesPreset(c)) return false
       if (stage && c.currentStage !== stage) return false
+      if (project && c.pod !== project) return false
       if (!term) return true
       return [
-        c.name, c.email, c.soeid, c.reportingManager, c.pod, c.location,
+        c.name, c.email, c.soeid, c.reportingManager, c.pod,
         c.band, roleText(c), STAGE_LABELS[c.currentStage],
       ].some((v) => v && String(v).toLowerCase().includes(term))
     })
-  }, [people, q, stage, preset])
+  }, [people, q, stage, project, preset])
 
   // Gate: only senior managers may view the full directory.
   if (!isSeniorManager) return <Navigate to="/" replace />
-
-  const managers = people.filter((p) => p.role === 'MANAGER').length
 
   const downloadSheet = () => {
     const cols = ['Name', 'Email', 'Role', 'Band', 'Reporting Manager', 'CITI Leadership', 'Onboarding Status', 'Project', 'SOEID', 'Join Date']
@@ -284,43 +289,37 @@ export default function People() {
         </div>
       )}
 
-      {/* Stage distribution - each chip shows a count and filters the table when clicked */}
-      <div className="dir-stats">
-        <button className={`dir-stat ${!stage && !preset ? 'active' : ''}`} onClick={() => { setStage(null); setPreset(null) }}>
-          All <b>{people.length}</b>
-        </button>
-        {STAGES.map((s) => (
-          <button
-            key={s}
-            className={`dir-stat ${stage === s ? 'active' : ''}`}
-            onClick={() => { setPreset(null); setStage(stage === s ? null : s) }}
-          >
-            <span className="dir-dot" style={{ background: stageDot(s) }} />
-            {STAGE_LABELS[s]} <b>{stageCount[s] || 0}</b>
-          </button>
-        ))}
-      </div>
-
-      <div className="toolbar">
-        <span className="badge gray">{managers} managers</span>
-        {stage && <span className="badge blue">Filtered: {STAGE_LABELS[stage]}</span>}
+      <div className="dir-bar">
+        <div className="dir-search-wrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search people…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </div>
+        <select className="dir-select" value={stage || ''} onChange={(e) => { setPreset(null); setStage(e.target.value || null) }}>
+          <option value="">All stages</option>
+          {STAGES.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]} ({stageCount[s] || 0})</option>)}
+        </select>
+        <select className="dir-select" value={project || ''} onChange={(e) => setProject(e.target.value || null)}>
+          <option value="">All projects</option>
+          {projects.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <span className="dir-count">{filtered.length} {filtered.length === 1 ? 'person' : 'people'}</span>
         <div className="spacer" />
-        <input
-          type="text"
-          className="dir-search"
-          placeholder="Search name, email, manager, pod, band…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-        <button className="btn secondary" onClick={downloadSheet}>↓ Download sheet</button>
+        <button className="btn secondary" onClick={downloadSheet}>↓ Download</button>
         <button className="btn" onClick={() => setShowImport(true)}>+ Onboard People</button>
       </div>
 
       <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
-        <table>
+        <table className="dir-table">
           <thead>
             <tr>
-              <th>Name</th><th>Role</th><th>Band</th><th>Reporting Manager</th><th>CITI Leadership</th>
+              <th>Name</th><th>Reporting Manager</th><th>CITI Leader</th>
               <th>Onboarding Status</th><th>Project</th><th>SOEID</th>
             </tr>
           </thead>
@@ -328,8 +327,6 @@ export default function People() {
             {filtered.map((c) => (
               <tr key={c.id} className="clickable" onClick={() => navigate(`/profiles/${c.id}`)}>
                 <td><strong>{c.name}</strong><div style={{ fontSize: 11, color: 'var(--muted)' }}>{c.email}</div></td>
-                <td><span className={`badge ${c.role === 'MANAGER' ? 'blue' : 'gray'}`}>{roleText(c)}</span></td>
-                <td>{c.band ? bandLabel(c.band) : '-'}</td>
                 <td>{c.reportingManager || '-'}</td>
                 <td>{c.citiLeadership || '-'}</td>
                 <td><span className={`badge ${stageBadge(c.currentStage)}`}>{STAGE_LABELS[c.currentStage]}</span></td>
@@ -340,7 +337,7 @@ export default function People() {
           </tbody>
         </table>
         {filtered.length === 0 && (
-          <div className="empty">{q || stage ? 'No people match the current filters.' : 'No registered people yet.'}</div>
+          <div className="empty">{q || stage || project ? 'No people match the current filters.' : 'No registered people yet.'}</div>
         )}
       </div>
 

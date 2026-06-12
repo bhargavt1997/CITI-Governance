@@ -50,21 +50,22 @@ function RiskBars({ items, labelStyle, onSelect }) {
   )
 }
 
-// Popup of everyone in a pod, flagging who is at risk.
-function PodModal({ pod, people, onClose, onOpenProfile }) {
+// Popup of everyone in a group (pod or CITI leader), at-risk people listed first.
+function PeopleRiskModal({ title, people, onClose, onOpenProfile }) {
   const atRisk = people.filter((p) => p.atRisk).length
+  const sorted = [...people].sort((a, b) => (b.atRisk ? 1 : 0) - (a.atRisk ? 1 : 0) || a.name.localeCompare(b.name))
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal wide" onClick={(e) => e.stopPropagation()}>
-        <h3>Pod · {pod}</h3>
+        <h3>{title}</h3>
         <p className="page-sub" style={{ marginTop: 0 }}>
           {people.length} {people.length === 1 ? 'person' : 'people'} · {atRisk} at risk
         </p>
         <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
           <table className="risk-table">
-            <thead><tr><th>Name</th><th>Level</th><th>CITI</th><th>Status</th><th>Risk</th></tr></thead>
+            <thead><tr><th>Name</th><th>Level</th><th>CITI Leader</th><th>Status</th><th>Risk</th></tr></thead>
             <tbody>
-              {people.map((p) => (
+              {sorted.map((p) => (
                 <tr
                   key={p.candidateId}
                   className={`clickable ${p.atRisk ? 'has-risk' : ''}`}
@@ -100,7 +101,7 @@ export default function LeadershipDashboard() {
   const [atRiskOnly, setAtRiskOnly] = useState(false)
   const [sort, setSort] = useState({ key: 'risk', dir: 'desc' })
   const [collapsed, setCollapsed] = useState(() => new Set())
-  const [podModal, setPodModal] = useState(null)
+  const [modal, setModal] = useState(null) // { title, people }
 
   useEffect(() => {
     api.riskSummary().then(setData).catch((e) => setError(e.message))
@@ -172,7 +173,8 @@ export default function LeadershipDashboard() {
   // Everyone in the org (full tree, includes developers) - used for the pod popup.
   const allPeople = []
   ;(function walk(n) { if (!n) return; allPeople.push(n); (n.reports || []).forEach(walk) })(data.root)
-  const podPeople = podModal ? allPeople.filter((p) => p.pod === podModal) : []
+  const openPod = (name) => setModal({ title: `Pod · ${name}`, people: allPeople.filter((p) => p.pod === name) })
+  const openCiti = (name) => setModal({ title: `CITI Leader · ${name}`, people: allPeople.filter((p) => p.citiLeadership === name) })
   // Each KPI opens the org directory and selects the matching filter there.
   const kpis = [
     { label: 'People in your org', value: org.total, filter: { type: 'all' } },
@@ -214,10 +216,7 @@ export default function LeadershipDashboard() {
   return (
     <div>
       <h1 className="page-title">Leadership Overview</h1>
-      <p className="page-sub">
-        Welcome, {user.name.split(' ')[0]}. Your organisation at a glance — sort or drill into any
-        manager to see their team and where the delivery risk is concentrated.
-      </p>
+      <p className="page-sub">Welcome, {user.name.split(' ')[0]}.</p>
 
       <div className="grid kpis">
         {kpis.map((k) => (
@@ -237,17 +236,33 @@ export default function LeadershipDashboard() {
       <div className="grid charts">
         <div className="card">
           <h3>Risk by Pod</h3>
-          <RiskBars items={data.projectRisk || []} labelStyle={projectStyle} onSelect={setPodModal} />
+          <RiskBars items={data.projectRisk || []} labelStyle={projectStyle} onSelect={openPod} />
         </div>
         <div className="card">
-          <h3>Risk by CITI Leadership</h3>
-          <RiskBars items={citiSummary} labelStyle={citiStyle} />
+          <h3>CITI Leadership · Risk Ownership</h3>
+          <div className="citi-cards">
+            {citiSummary.map((c) => (
+              <div key={c.name} className="citi-card clickable" onClick={() => openCiti(c.name)} title={`See who ${c.name} owns`}>
+                <div className="citi-card-top">
+                  <span className="risk-citi" style={citiStyle(c.name)}>{c.name}</span>
+                  <span className={`badge ${riskBadge(c.riskLevel)}`}>{c.riskLevel}</span>
+                </div>
+                <div className="citi-card-score" style={{ color: riskColor(c.riskLevel) }}>{c.riskScore}</div>
+                <div className="citi-card-people">{c.people} {c.people === 1 ? 'person' : 'people'} owned</div>
+                <div className="citi-card-break">
+                  <span>{c.karatFailed} KARAT failed</span>
+                  <span>{c.offboarding} offboarding</span>
+                  <span>{c.lowGt} low GT</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
       <div className="card" style={{ marginTop: 20 }}>
         <div className="toolbar" style={{ marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
-          <h3 style={{ margin: 0 }}>Org Risk — {data.root.name}'s organisation</h3>
+          <h3 style={{ margin: 0 }}>Organisation Risk Map</h3>
           <div className="spacer" style={{ flex: 1 }} />
           <button
             className={`seg-btn standalone ${atRiskOnly ? 'active' : ''}`}
@@ -277,7 +292,7 @@ export default function LeadershipDashboard() {
                 <th onClick={() => sortBy('name')}>Name{arrow('name')}</th>
                 <th onClick={() => sortBy('level')}>Level{arrow('level')}</th>
                 <th onClick={() => sortBy('project')}>Pod{arrow('project')}</th>
-                <th onClick={() => sortBy('citi')}>CITI{arrow('citi')}</th>
+                <th onClick={() => sortBy('citi')}>CITI Leader{arrow('citi')}</th>
                 <th onClick={() => sortBy('risk')}>Risk{arrow('risk')}</th>
               </tr>
             </thead>
@@ -318,12 +333,12 @@ export default function LeadershipDashboard() {
         </div>
       </div>
 
-      {podModal && (
-        <PodModal
-          pod={podModal}
-          people={podPeople}
-          onClose={() => setPodModal(null)}
-          onOpenProfile={(id) => { setPodModal(null); navigate(`/profiles/${id}`) }}
+      {modal && (
+        <PeopleRiskModal
+          title={modal.title}
+          people={modal.people}
+          onClose={() => setModal(null)}
+          onOpenProfile={(id) => { setModal(null); navigate(`/profiles/${id}`) }}
         />
       )}
     </div>
