@@ -66,15 +66,36 @@ public class DataSeeder {
         }
     }
 
-    /** Demo-specific org structure: Jitendr Kumar is a B5H senior manager; Bhargav T reports to him. Idempotent. */
+    /**
+     * Demo-specific org structure. Leadership chain: Bhargav (B5L) -> Jitendr (B5H) ->
+     * Shubhi Gupta (B4H) -> Srini Nagakedar (CEO, B2). Idempotent.
+     */
     private void applyDemoOrg(JdbcTemplate jdbc) {
         jdbc.update("UPDATE candidates SET band = 'b5h' "
                 + "WHERE email = 'jitendrkumar@deloitte.com' AND (band IS NULL OR band <> 'b5h')");
         jdbc.update("UPDATE candidates SET reporting_manager = 'Jitendr Kumar' "
                 + "WHERE email = 'tsbhargav@deloitte.com'");
+        // Shubhi Gupta is a B4H leader who manages Jitendr; Srini is the B2 CEO above her.
+        jdbc.update("UPDATE candidates SET band = 'b4h' WHERE email = 'shubhigupta7@deloitte.com'");
+        jdbc.update("UPDATE candidates SET band = 'b2' WHERE email = 'ssrinagakedar@deloitte.com'");
+        jdbc.update("UPDATE candidates SET reporting_manager = 'Shubhi Gupta' WHERE email = 'jitendrkumar@deloitte.com'");
+        jdbc.update("UPDATE candidates SET reporting_manager = 'Srini Nagakedar' WHERE email = 'shubhigupta7@deloitte.com'");
+        // The two team managers report under Jitendr (alongside Bhargav) so the org tree reads cleanly:
+        // Srini -> Shubhi -> Jitendr -> {Bhargav, Suresh, Anita} -> developers.
+        jdbc.update("UPDATE candidates SET reporting_manager = 'Jitendr Kumar' "
+                + "WHERE email IN ('suresh.iyer@deloitte.com','anita.desai@deloitte.com')");
+        // The CEO reports to no one.
+        jdbc.update("UPDATE candidates SET reporting_manager = NULL WHERE email = 'ssrinagakedar@deloitte.com'");
+        // Assign a CITI leadership owner (Gonzalo / Joshua) to everyone - split by id, fill only blanks.
+        jdbc.update("UPDATE candidates SET citi_leadership = 'Gonzalo' WHERE citi_leadership IS NULL AND (id % 2) = 0");
+        jdbc.update("UPDATE candidates SET citi_leadership = 'Joshua' WHERE citi_leadership IS NULL AND (id % 2) = 1");
         // Demo: one candidate sits in the KARAT Failed stage.
         jdbc.update("UPDATE candidates SET current_stage = 'KARAT_FAILED' "
                 + "WHERE email = 'rohan.joshi@deloitte.com'");
+        // Demo: one onboarded person is being offboarded (with a reason shown on hover).
+        jdbc.update("UPDATE candidates SET current_stage = 'OFFBOARDING', "
+                + "offboarding_reason = 'Project ramp-down - rolling off the Citi engagement' "
+                + "WHERE email = 'rahul.verma@deloitte.com' AND current_stage = 'ONBOARDED' AND offboarding_reason IS NULL");
         // SOEID only exists once onboarding has started - clear it for anyone in an earlier stage.
         jdbc.update("UPDATE candidates SET soeid = NULL WHERE soeid IS NOT NULL AND current_stage IN "
                 + "('NOMINATED','CARAT_INTERVIEW','KARAT_FAILED','CLIENT_INTERVIEW','FINAL_SELECTION')");
@@ -93,6 +114,8 @@ public class DataSeeder {
             {"Anita Desai", "anita.desai@deloitte.com"},
             {"Bhargav T", "tsbhargav@deloitte.com"},
             {"Jitendr Kumar", "jitendrkumar@deloitte.com"},
+            {"Shubhi Gupta", "shubhigupta7@deloitte.com"},
+            {"Srini Nagakedar", "ssrinagakedar@deloitte.com"},
     };
 
     /**
@@ -119,9 +142,9 @@ public class DataSeeder {
      * Idempotent - once migrated, values are already b*, so the CASE leaves them untouched.
      */
     private void migrateBands(JdbcTemplate jdbc) {
-        // Managers must hold a manager-eligible band (b6h, b5l, b5h, b4l, b4h).
+        // Managers must hold a manager-eligible band (b6h, b5l, b5h, b4l, b4h, b2 for the CEO).
         jdbc.update("UPDATE candidates SET band = '" + DEFAULT_MANAGER_BAND
-                + "' WHERE role = 'MANAGER' AND (band IS NULL OR band NOT IN ('b6h','b5l','b5h','b4l','b4h'))");
+                + "' WHERE role = 'MANAGER' AND (band IS NULL OR band NOT IN ('b6h','b5l','b5h','b4l','b4h','b2'))");
         // Developers must hold a developer band (b8, b7, b6l). Map legacy A/B/C/D and manager bands across.
         jdbc.update("UPDATE candidates SET band = CASE "
                 + "WHEN band IN ('b8','b7','b6l') THEN band "

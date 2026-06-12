@@ -386,6 +386,8 @@ select:focus, input:focus, textarea:focus {
 .lane.done { background: var(--green-bg); }
 .lane.failed { background: var(--red-bg); }
 .lane.failed .kan-count { color: var(--red); border-color: #f3c9c9; }
+.lane.offboard { background: var(--amber-bg); }
+.lane.offboard .kan-count { color: var(--amber); border-color: #f3dcb0; }
 .lane.drop { outline-color: var(--accent); background: var(--accent-soft); }
 .lane-head {
   flex: 0 0 184px; display: flex; flex-direction: column; justify-content: center; gap: 8px;
@@ -507,10 +509,39 @@ select:focus, input:focus, textarea:focus {
   from { opacity: 0; transform: scale(0.97) translateY(6px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
+.modal.wide { width: 640px; }
 .modal h3 { margin: 0 0 18px; font-size: 17px; font-weight: 700; }
 .modal .form-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 13px; }
 .modal .form-row label { font-size: 12px; font-weight: 600; color: var(--muted); }
 .modal .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+/* Bulk people import */
+.import-hint { font-size: 11.5px; color: var(--faint); margin-bottom: 12px; }
+.dropzone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
+  border: 2px dashed var(--border); border-radius: 14px; padding: 30px 20px; margin-top: 4px;
+  cursor: pointer; text-align: center; background: #fbfcff;
+  transition: border-color 0.15s, background 0.15s;
+}
+.dropzone:hover, .dropzone.drag { border-color: var(--accent); background: var(--accent-soft); }
+.dropzone.has-file { border-style: solid; border-color: var(--green); background: var(--green-bg); }
+.dz-icon { color: var(--accent); }
+.dropzone.has-file .dz-icon { color: var(--green); }
+.dz-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+.dz-strong { color: var(--accent); }
+.dz-sub { font-size: 12px; color: var(--muted); }
+.link-btn {
+  background: none; border: none; color: var(--accent-dark); font-weight: 600;
+  cursor: pointer; font-size: 12.5px; font-family: inherit; padding: 10px 0 0;
+}
+.link-btn:hover { text-decoration: underline; }
+.import-preview { margin-top: 14px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.import-preview table { width: 100%; font-size: 12.5px; }
+.import-preview .bad { color: var(--red); font-style: italic; }
+.import-result { margin-top: 16px; }
+.import-errors { margin: 10px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--red); }
+.import-errors.muted { color: var(--muted); }
+.import-errors li { margin-bottom: 3px; }
 
 .empty { color: var(--muted); font-size: 13px; padding: 28px; text-align: center; }
 .error-banner {
@@ -575,3 +606,47 @@ select:focus, input:focus, textarea:focus {
   cursor: pointer; font-size: 13px; font-family: inherit; padding: 0;
 }
 .login-switch button:hover { text-decoration: underline; }
+
+/* ================= Leadership risk view ================= */
+/* The CITI leadership chip */
+.risk-citi { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; white-space: nowrap; display: inline-block; }
+
+/* Segmented filter */
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg-btn {
+  background: #fff; border: none; padding: 6px 12px; font-size: 12.5px; font-family: inherit;
+  cursor: pointer; color: var(--muted); border-right: 1px solid var(--border);
+}
+.seg-btn:last-child { border-right: none; }
+.seg-btn.active { background: var(--accent); color: #fff; font-weight: 600; }
+.seg-btn.standalone { border: 1px solid var(--border); border-radius: 8px; }
+.seg-btn.standalone.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* CITI risk composition bars */
+.risk-split { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
+.rs-block { display: flex; flex-direction: column; gap: 4px; }
+.rs-row { display: flex; align-items: center; gap: 10px; }
+.rs-row .risk-citi { flex: 0 0 76px; text-align: center; }
+.rs-bar { flex: 1; height: 10px; background: #eef1f7; border-radius: 999px; overflow: hidden; }
+.rs-fill { height: 100%; border-radius: 999px; transition: width 0.3s ease; }
+.rs-people { font-size: 12px; color: var(--muted); flex: 0 0 auto; min-width: 64px; text-align: right; }
+.rs-break { font-size: 11.5px; color: var(--faint); padding-left: 86px; }
+
+/* Sortable hierarchy risk table */
+.risk-table { width: 100%; }
+.risk-table th { cursor: pointer; user-select: none; white-space: nowrap; }
+.risk-table th:hover { color: var(--accent); }
+.risk-table th.num, .risk-table td.num { text-align: center; }
+.risk-table tbody tr.has-risk { background: #fffaf3; }
+.risk-table tbody tr:hover { background: var(--accent-soft); }
+.risk-name-cell { display: inline-flex; align-items: center; gap: 6px; }
+.risk-caret {
+  background: none; border: none; cursor: pointer; color: var(--muted); font-size: 11px;
+  width: 16px; height: 16px; padding: 0; line-height: 1; flex: 0 0 16px;
+}
+.risk-caret.empty { cursor: default; }
+.risk-level { font-size: 12px; color: var(--muted); }
+.risk-num { font-weight: 700; font-size: 13px; }
+.risk-num.bad { color: var(--red); }
+.risk-num.warn { color: var(--amber); }
+.risk-num.zero { color: var(--faint); font-weight: 500; }

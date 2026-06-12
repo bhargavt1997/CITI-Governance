@@ -111,8 +111,14 @@ export default function ProfileDetail() {
         {soeidVisible(c.currentStage) && (
           <><span className="badge gray">{c.soeid || 'SOEID pending'}</span>{' '}</>
         )}
-        <span className={`badge ${c.currentStage === 'ONBOARDED' ? 'green' : c.currentStage === 'KARAT_FAILED' ? 'red' : 'blue'}`}>{STAGE_LABELS[c.currentStage]}</span>
+        <span className={`badge ${c.currentStage === 'ONBOARDED' ? 'green' : c.currentStage === 'KARAT_FAILED' ? 'red' : c.currentStage === 'OFFBOARDING' ? 'amber' : c.currentStage === 'OFFBOARDED' ? 'gray' : 'blue'}`}>{STAGE_LABELS[c.currentStage]}</span>
       </p>
+
+      {(c.currentStage === 'OFFBOARDING' || c.currentStage === 'OFFBOARDED') && c.offboardingReason && (
+        <div className="error-banner" style={{ background: 'var(--amber-bg)', color: 'var(--amber)', borderColor: '#f3dcb0' }}>
+          <strong>Offboarding reason:</strong> {c.offboardingReason}
+        </div>
+      )}
 
       <div className="two-col">
         <div className="card">
@@ -140,6 +146,7 @@ export default function ProfileDetail() {
                 <div className="field"><label>Pod</label><div>{c.pod || '-'}</div></div>
                 <div className="field"><label>Location</label><div>{c.location || '-'}</div></div>
                 <div className="field"><label>Join Date</label><div>{c.joinDate || '-'}</div></div>
+                <div className="field"><label>CITI Leadership</label><div>{c.citiLeadership || '-'}</div></div>
                 <div className="field">
                   <label>Reporting Manager</label>
                   {!editManager ? (

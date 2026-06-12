@@ -60,10 +60,13 @@ export default function DeveloperDashboard() {
   })
   const thisMonthMetric = metrics.find((x) => x.month === month)
 
-  // Happy-path milestones (KARAT Failed is a detour, not a normal step).
-  const JOURNEY = STAGES.filter((s) => s !== 'KARAT_FAILED')
+  // Happy-path milestones (KARAT Failed and offboarding are detours, not normal steps and
+  // are never surfaced on an individual's own dashboard).
+  const JOURNEY = STAGES.filter((s) => s !== 'KARAT_FAILED' && s !== 'OFFBOARDING' && s !== 'OFFBOARDED')
   const failed = c.currentStage === 'KARAT_FAILED'
-  const journeyStage = failed ? 'CARAT_INTERVIEW' : c.currentStage
+  const offboarding = c.currentStage === 'OFFBOARDING' || c.currentStage === 'OFFBOARDED'
+  // Offboarding people were onboarded - show the journey as complete rather than the detour.
+  const journeyStage = failed ? 'CARAT_INTERVIEW' : offboarding ? 'ONBOARDED' : c.currentStage
   const curIdx = JOURNEY.indexOf(journeyStage)
   const completed = enrollments.filter((e) => e.status === 'COMPLETED').length
 

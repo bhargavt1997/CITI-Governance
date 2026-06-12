@@ -9,7 +9,10 @@ public enum OnboardingStage {
     ONBOARDING_INITIATED("Onboarding Initiated"),
     CITI_CLEARANCE_RECEIVED("Citi Clearance Received"),
     VDI_SETUP_IN_PROGRESS("VDI Setup In Progress"),
-    ONBOARDED("Onboarded");
+    ONBOARDED("Onboarded"),
+    // Offboarding detours - only reachable from ONBOARDED or KARAT_FAILED, shown on the pipeline only.
+    OFFBOARDING("Offboarding"),
+    OFFBOARDED("Offboarded");
 
     private final String label;
 
