@@ -9,7 +9,7 @@ const riskBadge = (level) => (level === 'High' ? 'red' : level === 'Medium' ? 'a
 const riskColor = (level) => (level === 'High' ? '#e11d48' : level === 'Medium' ? '#f59e0b' : '#059669')
 // Distinct chip colours for the two risk dimensions.
 const CITI_COLORS = { Gonzalo: '#7c3aed', Joshua: '#0891b2' }
-const PROJECT_COLORS = { RUBY: '#e11d48', HY: '#0891b2', MES: '#7c3aed' }
+const PROJECT_COLORS = { RUBY: '#e11d48', HY: '#0891b2', MES: '#7c3aed', ETL: '#0d9488' }
 const pill = (map) => (name) => ({
   background: (map[name] || '#64748b') + '1a',
   color: map[name] || '#64748b',

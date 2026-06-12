@@ -96,13 +96,22 @@ public class DataSeeder {
         // Atul Raj is a B5H senior manager reporting to Shubhi (a second senior-management branch).
         jdbc.update("UPDATE candidates SET band = 'b5h' WHERE email = 'aturaj@deloitte.com'");
         jdbc.update("UPDATE candidates SET reporting_manager = 'Shubhi Gupta' WHERE email = 'aturaj@deloitte.com'");
+        // Legacy ORION project was renamed to ETL - migrate any rows + drop the old pod (re-seeded as ETL).
+        jdbc.update("UPDATE candidates SET pod = 'ETL' WHERE pod = 'ORION'");
+        jdbc.update("DELETE FROM pods WHERE name = 'ORION'");
         // Everyone is tied to a project (RUBY / HY / MES) via pod. Idempotent: only fills non-project pods.
         jdbc.update("UPDATE candidates SET pod = CASE (id % 3) WHEN 0 THEN 'RUBY' WHEN 1 THEN 'HY' ELSE 'MES' END "
-                + "WHERE pod IS NULL OR pod NOT IN ('RUBY','HY','MES')");
+                + "WHERE pod IS NULL OR pod NOT IN ('RUBY','HY','MES','ETL')");
         // A pod lead sits in the pod they lead: RUBY=Jitendr, HY=Atul, MES=Shubhi.
         jdbc.update("UPDATE candidates SET pod = 'RUBY' WHERE email = 'jitendrkumar@deloitte.com'");
         jdbc.update("UPDATE candidates SET pod = 'HY' WHERE email = 'aturaj@deloitte.com'");
         jdbc.update("UPDATE candidates SET pod = 'MES' WHERE email = 'shubhigupta7@deloitte.com'");
+        // ETL project members, made HIGH-risk for differentiation (2 offboarding + 1 KARAT-failed).
+        jdbc.update("UPDATE candidates SET pod = 'ETL' WHERE email IN "
+                + "('arjun.mehta@deloitte.com','priya.sharma@deloitte.com','sneha.reddy@deloitte.com','meera.pillai@deloitte.com')");
+        jdbc.update("UPDATE candidates SET current_stage = 'OFFBOARDING', offboarding_reason = 'Rolling off project ORION' "
+                + "WHERE email IN ('arjun.mehta@deloitte.com','priya.sharma@deloitte.com') AND offboarding_reason IS NULL");
+        jdbc.update("UPDATE candidates SET current_stage = 'KARAT_FAILED' WHERE email = 'meera.pillai@deloitte.com'");
         // The CEO reports to no one.
         jdbc.update("UPDATE candidates SET reporting_manager = NULL WHERE email = 'ssrinagakedar@deloitte.com'");
         // Assign a CITI leadership owner (Gonzalo / Joshua) to everyone - split by id, fill only blanks.
@@ -255,9 +264,10 @@ public class DataSeeder {
     private void ensurePods(PodRepository pods) {
         // name, leadName, leadEmail, citiLeader
         String[][] seed = {
-            {"RUBY", "Jitendr Kumar", "jitendrkumar@deloitte.com", "Joshua"},
-            {"HY",   "Atul Raj",      "aturaj@deloitte.com",       "Gonzalo"},
+            {"RUBY", "Jitendr Kumar", "jitendrkumar@deloitte.com", "Gonzalo"},
             {"MES",  "Shubhi Gupta",  "shubhigupta7@deloitte.com", "Gonzalo"},
+            {"HY",   "Atul Raj",      "aturaj@deloitte.com",       "Joshua"},
+            {"ETL",  "Atul Raj",      "aturaj@deloitte.com",       "Joshua"},
         };
         for (String[] s : seed) {
             Pod p = pods.findByNameIgnoreCase(s[0]).orElseGet(Pod::new);

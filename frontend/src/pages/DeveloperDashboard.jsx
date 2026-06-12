@@ -38,7 +38,9 @@ export default function DeveloperDashboard() {
 
   const year = new Date().getFullYear()
   const month = new Date().toISOString().slice(0, 7)
-  const ptsData = MONTHS.map((_, i) => {
+  // Only plot months up to the current one (no future-month zeros).
+  const monthsSoFar = MONTHS.slice(0, new Date().getMonth() + 1)
+  const ptsData = monthsSoFar.map((_, i) => {
     const key = `${year}-${String(i + 1).padStart(2, '0')}`
     const t = timesheets.find((ts) => ts.month === key)
     return { month: key, hours: t ? (t.total ?? 0) : 0 }
@@ -46,7 +48,7 @@ export default function DeveloperDashboard() {
   const hoursThisYear = ptsData.reduce((s, d) => s + (d.hours || 0), 0)
 
   // Delivery metrics, only shown once the person is onboarded and working.
-  const gtData = MONTHS.map((_, i) => {
+  const gtData = monthsSoFar.map((_, i) => {
     const key = `${year}-${String(i + 1).padStart(2, '0')}`
     const m = metrics.find((x) => x.month === key)
     return {

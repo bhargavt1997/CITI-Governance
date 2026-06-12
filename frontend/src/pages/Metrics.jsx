@@ -81,20 +81,23 @@ export default function Metrics() {
     }
   }
 
-  // Current-year series for the charts.
+  // Current-year series for the charts, only up to the current month (no future-month zeros).
   const year = new Date().getFullYear()
-  const series = useMemo(() => MONTHS.map((_, i) => {
-    const key = `${year}-${String(i + 1).padStart(2, '0')}`
-    const m = history.find((h) => h.month === key)
-    return {
-      month: key,
-      commits: m?.githubCommits ?? 0,
-      storiesAssigned: m?.storiesAssigned ?? 0,
-      storiesCompleted: m?.storiesCompleted ?? 0,
-      pointsAssigned: m?.storyPointsAssigned ?? 0,
-      pointsCompleted: m?.storyPointsCompleted ?? 0,
-    }
-  }), [history, year])
+  const series = useMemo(() => {
+    const lastMonth = new Date().getMonth() // 0-based current month
+    return MONTHS.slice(0, lastMonth + 1).map((_, i) => {
+      const key = `${year}-${String(i + 1).padStart(2, '0')}`
+      const m = history.find((h) => h.month === key)
+      return {
+        month: key,
+        commits: m?.githubCommits ?? 0,
+        storiesAssigned: m?.storiesAssigned ?? 0,
+        storiesCompleted: m?.storiesCompleted ?? 0,
+        pointsAssigned: m?.storyPointsAssigned ?? 0,
+        pointsCompleted: m?.storyPointsCompleted ?? 0,
+      }
+    })
+  }, [history, year])
 
   const thisMonth = history.find((m) => m.month === month)
   const kpis = [

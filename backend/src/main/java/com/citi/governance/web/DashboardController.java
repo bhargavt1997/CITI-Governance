@@ -103,11 +103,12 @@ public class DashboardController {
             monthlyTrends.add(e);
         });
 
-        // PTS hours for the current year (all 12 months) + pending approvals - scoped to the same
-        // candidates as the funnel, so the numbers match the Approvals tab.
+        // PTS hours for the current year, up to the current month (no future-month zeros) + pending
+        // approvals - scoped to the same candidates as the funnel, so the numbers match the Approvals tab.
         int year = java.time.LocalDate.now().getYear();
+        int currentMonth = java.time.LocalDate.now().getMonthValue();
         Map<String, Double> ptsByMonthMap = new LinkedHashMap<>();
-        for (int mo = 1; mo <= 12; mo++) {
+        for (int mo = 1; mo <= currentMonth; mo++) {
             ptsByMonthMap.put(String.format("%d-%02d", year, mo), 0.0);
         }
         Long ownId = user.getCandidateId();
