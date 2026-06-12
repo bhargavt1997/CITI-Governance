@@ -98,6 +98,8 @@ export const LEADERSHIP_BANDS = ['b4l', 'b4h', 'b2']
 export const PROJECTS = ['RUBY', 'HY', 'MES']
 export const CITI_LEADERS = ['Gonzalo', 'Joshua']
 export const bandLabel = (b) => (b ? String(b).toUpperCase() : '')
+// URL-friendly slug from a person's name, e.g. "Shubhi Gupta" -> "shubhi-gupta". Used for /profiles/:id.
+export const slug = (name) => String(name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
 // Seniority rank by band order (b8 lowest .. b4h highest). Higher = more senior.
 export const bandRank = (b) => ALL_BANDS.indexOf(b)
 // The band alone decides the role: B6H and above manage, B6L and below build.

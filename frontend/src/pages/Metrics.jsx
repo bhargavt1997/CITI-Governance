@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
 import { api } from '../api'
 import { useAuth } from '../auth'
@@ -103,8 +103,6 @@ export default function Metrics() {
     { label: 'Story Points Completed', value: `${thisMonth?.storyPointsCompleted ?? 0} / ${thisMonth?.storyPointsAssigned ?? 0}` },
   ]
 
-  const recent = [...history].sort((a, b) => b.month.localeCompare(a.month)).slice(0, 12)
-
   // GT Metrics only apply once a person is onboarded and working.
   if (!isOnboarded) return <Navigate to="/" replace />
 
@@ -179,20 +177,21 @@ export default function Metrics() {
       <div className="grid charts">
         <div className="card">
           <h3>GitHub Commits · {year}</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={series}>
+          <ResponsiveContainer width="100%" height={260}>
+            <ComposedChart data={series}>
               <CartesianGrid strokeDasharray="3 3" stroke="#eef0f5" />
               <XAxis dataKey="month" tickFormatter={monthShort} fontSize={11} />
               <YAxis fontSize={11} allowDecimals={false} />
               <Tooltip labelFormatter={monthShort} />
-              <Bar dataKey="commits" name="Commits" fill={INDIGO} radius={[4, 4, 0, 0]} />
-            </BarChart>
+              <Bar dataKey="commits" name="Commits" barSize={20} fill="#c7d2fe" radius={[4, 4, 0, 0]} />
+              <Line type="monotone" dataKey="commits" name="Trend" stroke={INDIGO} strokeWidth={2.5} dot={{ r: 3 }} />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
 
         <div className="card">
           <h3>Stories · {year}</h3>
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer width="100%" height={260}>
             <BarChart data={series}>
               <CartesianGrid strokeDasharray="3 3" stroke="#eef0f5" />
               <XAxis dataKey="month" tickFormatter={monthShort} fontSize={11} />
@@ -203,42 +202,6 @@ export default function Metrics() {
               <Bar dataKey="storiesCompleted" name="Completed" fill={GREEN} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
-
-        <div className="card">
-          <h3>Story Points · {year}</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={series}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eef0f5" />
-              <XAxis dataKey="month" tickFormatter={monthShort} fontSize={11} />
-              <YAxis fontSize={11} allowDecimals={false} />
-              <Tooltip labelFormatter={monthShort} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="pointsAssigned" name="Assigned" fill={INDIGO} radius={[4, 4, 0, 0]} />
-              <Bar dataKey="pointsCompleted" name="Completed" fill={GREEN} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
-          <h3 style={{ padding: '18px 20px 0' }}>Recent Months</h3>
-          <table>
-            <thead>
-              <tr><th>Month</th><th>Commits</th><th>Stories</th><th>Points</th><th>Highlights</th></tr>
-            </thead>
-            <tbody>
-              {recent.map((m) => (
-                <tr key={m.month}>
-                  <td><strong>{monthLabel(m.month)}</strong></td>
-                  <td>{m.githubCommits ?? 0}</td>
-                  <td>{m.storiesCompleted ?? 0} / {m.storiesAssigned ?? 0}</td>
-                  <td>{m.storyPointsCompleted ?? 0} / {m.storyPointsAssigned ?? 0}</td>
-                  <td style={{ fontSize: 12.5, color: 'var(--muted)', maxWidth: 320 }}>{m.highlights || '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {recent.length === 0 && <div className="empty">No metrics recorded yet. Add this month's above.</div>}
         </div>
       </div>
     </div>

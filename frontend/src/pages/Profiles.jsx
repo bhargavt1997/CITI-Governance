@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api, STAGE_LABELS, bandLabel } from '../api'
+import { api, STAGE_LABELS, bandLabel, slug } from '../api'
 import { useAuth } from '../auth'
 
 const currentMonth = () => new Date().toISOString().slice(0, 7)
@@ -104,7 +104,7 @@ export default function Profiles() {
             {team.map((c) => {
               const commits = commitsThisMonth(c.id)
               return (
-                <tr key={c.id} className="clickable" onClick={() => navigate(`/profiles/${c.id}`)}>
+                <tr key={c.id} className="clickable" onClick={() => navigate(`/profiles/${slug(c.name)}`)}>
                   <td>
                     <strong>{c.name}</strong>
                     {c.id === user.candidateId && <span className="badge blue" style={{ marginLeft: 6 }}>You</span>}

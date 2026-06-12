@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { api, STAGES, STAGE_LABELS, bandLabel, soeidVisible } from '../api'
+import { api, STAGES, STAGE_LABELS, bandLabel, soeidVisible, slug } from '../api'
 import { useAuth } from '../auth'
 import { useToast } from '../toast'
 
@@ -105,7 +105,7 @@ export default function Onboarding() {
                     draggable={isManager}
                     onDragStart={() => setDragId(c.id)}
                     onDragEnd={() => { setDragId(null); setDropStage(null) }}
-                    onClick={() => navigate(`/profiles/${c.id}`)}
+                    onClick={() => navigate(`/profiles/${slug(c.name)}`)}
                   >
                     <div className="kc-top">
                       <span className="kc-avatar">{initials(c.name)}</span>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useNavigate, useLocation } from 'react-router-dom'
-import { api, STAGES, STAGE_LABELS, bandLabel } from '../api'
+import { api, STAGES, STAGE_LABELS, bandLabel, slug } from '../api'
 import { useAuth } from '../auth'
 import { useToast } from '../toast'
 
@@ -325,7 +325,7 @@ export default function People() {
           </thead>
           <tbody>
             {filtered.map((c) => (
-              <tr key={c.id} className="clickable" onClick={() => navigate(`/profiles/${c.id}`)}>
+              <tr key={c.id} className="clickable" onClick={() => navigate(`/profiles/${slug(c.name)}`)}>
                 <td><strong>{c.name}</strong><div style={{ fontSize: 11, color: 'var(--muted)' }}>{c.email}</div></td>
                 <td>{c.reportingManager || '-'}</td>
                 <td>{c.citiLeadership || '-'}</td>

@@ -4,7 +4,7 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts'
-import { api, STAGE_LABELS } from '../api'
+import { api, STAGE_LABELS, slug } from '../api'
 import { useAuth } from '../auth'
 import DeveloperDashboard from './DeveloperDashboard.jsx'
 import LeadershipDashboard from './LeadershipDashboard.jsx'
@@ -145,7 +145,7 @@ function ManagerDashboard() {
               </thead>
               <tbody>
                 {candidates.map((c) => (
-                  <tr key={c.id} className="clickable" onClick={() => navigate(`/profiles/${c.id}`)}>
+                  <tr key={c.id} className="clickable" onClick={() => navigate(`/profiles/${slug(c.name)}`)}>
                     <td><strong>{c.name}</strong></td>
                     <td>{c.pod || '-'}</td>
                     <td><span className={`badge ${stageBadge(c.currentStage)}`}>{STAGE_LABELS[c.currentStage]}</span></td>

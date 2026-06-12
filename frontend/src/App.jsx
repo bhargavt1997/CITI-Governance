@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Route, Routes, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { api } from './api'
+import { api, slug } from './api'
 import { useAuth } from './auth'
 import { useCrumbs } from './crumbs'
 import Login from './pages/Login.jsx'
@@ -92,7 +92,7 @@ function SearchBox() {
             <div
               key={c.id}
               className="search-result"
-              onClick={() => { setOpen(false); setQ(''); navigate(`/profiles/${c.id}`) }}
+              onClick={() => { setOpen(false); setQ(''); navigate(`/profiles/${slug(c.name)}`) }}
             >
               <strong>{c.name}</strong>
               <span>{c.soeid || 'No SOEID'} · {c.pod || '-'}</span>
@@ -120,7 +120,7 @@ function UserMenu() {
 
   const goProfile = () => {
     setOpen(false)
-    if (user.candidateId) navigate(`/profiles/${user.candidateId}`)
+    if (user.candidateId) navigate(`/profiles/${slug(user.name)}`)
     else navigate('/profiles')
   }
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api, bandLabel, bandRank, STAGE_LABELS } from '../api'
+import { api, bandLabel, bandRank, STAGE_LABELS, slug } from '../api'
 import { useAuth } from '../auth'
 
 const stageBadge = (s) => (s === 'ONBOARDED' ? 'green' : s === 'KARAT_FAILED' ? 'red' : s === 'OFFBOARDING' ? 'amber' : s === 'OFFBOARDED' ? 'gray' : s === 'NOMINATED' ? 'gray' : 'blue')
@@ -63,22 +63,18 @@ function PeopleRiskModal({ title, people, onClose, onOpenProfile }) {
         </p>
         <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
           <table className="risk-table">
-            <thead><tr><th>Name</th><th>Level</th><th>CITI Leader</th><th>Status</th><th>Risk</th></tr></thead>
+            <thead><tr><th>Name</th><th>Pod</th><th>Status</th></tr></thead>
             <tbody>
               {sorted.map((p) => (
                 <tr
                   key={p.candidateId}
                   className={`clickable ${p.atRisk ? 'has-risk' : ''}`}
-                  onClick={() => onOpenProfile(p.candidateId)}
+                  onClick={() => onOpenProfile(p)}
                   title="Open profile"
                 >
                   <td><strong>{p.name}</strong></td>
-                  <td><span className="risk-level">{levelText(p.role, p.band)}</span></td>
-                  <td>{p.citiLeadership || '—'}</td>
+                  <td>{p.pod || '—'}</td>
                   <td><span className={`badge ${stageBadge(p.stage)}`}>{STAGE_LABELS[p.stage] || p.stage}</span></td>
-                  <td>{p.atRisk
-                    ? <span className="badge red">{p.riskReason}</span>
-                    : <span className="risk-num zero">—</span>}</td>
                 </tr>
               ))}
             </tbody>
@@ -290,7 +286,6 @@ export default function LeadershipDashboard() {
             <thead>
               <tr>
                 <th onClick={() => sortBy('name')}>Name{arrow('name')}</th>
-                <th onClick={() => sortBy('level')}>Level{arrow('level')}</th>
                 <th onClick={() => sortBy('project')}>Pod{arrow('project')}</th>
                 <th onClick={() => sortBy('citi')}>CITI Leader{arrow('citi')}</th>
                 <th onClick={() => sortBy('risk')}>Risk{arrow('risk')}</th>
@@ -309,14 +304,13 @@ export default function LeadershipDashboard() {
                           : <span className="risk-caret empty" />}
                         <button
                           className="risk-name-link"
-                          onClick={() => navigate(`/profiles/${node.candidateId}`)}
+                          onClick={() => navigate(`/profiles/${slug(node.name)}`)}
                           title="Open profile"
                         >
                           {node.name}
                         </button>
                       </span>
                     </td>
-                    <td><span className="risk-level">{levelText(node.role, node.band)}</span></td>
                     <td>{node.pod
                       ? <span className="risk-citi" style={projectStyle(node.pod)}>{node.pod}</span>
                       : <span className="risk-num zero">—</span>}</td>
@@ -338,7 +332,7 @@ export default function LeadershipDashboard() {
           title={modal.title}
           people={modal.people}
           onClose={() => setModal(null)}
-          onOpenProfile={(id) => { setModal(null); navigate(`/profiles/${id}`) }}
+          onOpenProfile={(p) => { setModal(null); navigate(`/profiles/${slug(p.name)}`) }}
         />
       )}
     </div>

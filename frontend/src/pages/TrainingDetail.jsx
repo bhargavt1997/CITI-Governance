@@ -150,8 +150,6 @@ export default function TrainingDetail() {
           </table>
         )}
       </div>
-
-      {toast && <div className="toast">{toast}</div>}
     </div>
   )
 }

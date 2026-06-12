@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
 } from 'recharts'
-import { api, STAGE_LABELS, ALL_BANDS, bandLabel, bandRank, soeidVisible } from '../api'
+import { api, STAGE_LABELS, ALL_BANDS, bandLabel, bandRank, soeidVisible, slug } from '../api'
 import { useAuth } from '../auth'
 import { useCrumbs } from '../crumbs'
 import { useToast } from '../toast'
@@ -34,10 +34,20 @@ export default function ProfileDetail() {
   const [editDetails, setEditDetails] = useState(false)
   const [detailsDraft, setDetailsDraft] = useState({})
 
-  const load = () => {
-    Promise.all([api.candidate(id), api.candidateEnrollments(id)])
-      .then(([cand, enr]) => { setC(cand); setEnrollments(enr); setLabel(`/profiles/${id}`, cand.name.split(' ')[0]) })
-      .catch((e) => setError(e.message))
+  const load = async () => {
+    try {
+      // The URL param is a name slug (e.g. "shubhi-gupta"); numeric ids still work for old links.
+      let cand
+      if (/^\d+$/.test(id)) {
+        cand = await api.candidate(id)
+      } else {
+        const all = await api.candidates()
+        cand = all.find((c) => slug(c.name) === id)
+        if (!cand) throw new Error('Profile not found')
+      }
+      const enr = await api.candidateEnrollments(cand.id)
+      setC(cand); setEnrollments(enr); setLabel(`/profiles/${id}`, cand.name.split(' ')[0])
+    } catch (e) { setError(e.message) }
   }
   useEffect(() => { load() }, [id])
   // Fetch managers for everyone (used for the reporting-manager email tooltip; managers also use it to remap).
@@ -315,7 +325,7 @@ export default function ProfileDetail() {
             </thead>
             <tbody>
               {reportees.map((r) => (
-                <tr key={r.id} className="clickable" onClick={() => navigate(`/profiles/${r.id}`)}>
+                <tr key={r.id} className="clickable" onClick={() => navigate(`/profiles/${slug(r.name)}`)}>
                   <td><strong>{r.name}</strong></td>
                   <td>{r.band ? bandLabel(r.band) : '-'}</td>
                   <td>{r.pod || '-'}</td>
