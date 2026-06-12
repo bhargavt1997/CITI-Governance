@@ -70,6 +70,10 @@ export const api = {
   // Users
   managers: () => request('/users/managers'),
 
+  // Projects (pods)
+  pods: () => request('/pods'),
+  createPod: (data) => request('/pods', { method: 'POST', body: JSON.stringify(data) }),
+
   // Trainings
   trainings: () => request('/trainings'),
   training: (id) => request(`/trainings/${id}`),
@@ -86,6 +90,9 @@ export const MANAGER_BANDS = ['b6h', 'b5l', 'b5h', 'b4l', 'b4h', 'b2']
 export const DEVELOPER_BANDS = ['b8', 'b7', 'b6l']
 // Top-level leadership (B4L and above, including the CEO band b2) get the org-wide risk view.
 export const LEADERSHIP_BANDS = ['b4l', 'b4h', 'b2']
+// Delivery projects (stored in the candidate's `pod` field) and the client-side CITI leaders.
+export const PROJECTS = ['RUBY', 'HY', 'MES']
+export const CITI_LEADERS = ['Gonzalo', 'Joshua']
 export const bandLabel = (b) => (b ? String(b).toUpperCase() : '')
 // Seniority rank by band order (b8 lowest .. b4h highest). Higher = more senior.
 export const bandRank = (b) => ALL_BANDS.indexOf(b)

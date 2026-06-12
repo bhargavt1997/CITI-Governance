@@ -208,10 +208,29 @@ public class DashboardController {
         });
         citiSummary.sort((a, b) -> Integer.compare((int) b.get("riskScore"), (int) a.get("riskScore")));
 
+        // Risk grouped by project (stored in pod), over the same subtree.
+        Map<String, List<Candidate>> byProject = subtree.stream()
+                .collect(Collectors.groupingBy(c -> orUnassigned(c.getPod()),
+                        LinkedHashMap::new, Collectors.toList()));
+        List<Map<String, Object>> projectRisk = new ArrayList<>();
+        byProject.forEach((project, people) -> {
+            Map<String, Object> m = riskCounts(people, lowGtIds);
+            m.put("name", project);
+            m.put("people", people.size());
+            projectRisk.add(m);
+        });
+        projectRisk.sort((a, b) -> Integer.compare((int) b.get("riskScore"), (int) a.get("riskScore")));
+
+        // Candidate ids in this org that are low-GT, so the directory can list exactly who they are.
+        List<Long> subtreeLowGtIds = subtree.stream()
+                .filter(c -> lowGtIds.contains(c.getId())).map(Candidate::getId).toList();
+
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("org", org);
         out.put("stageBreakdown", stageBreakdown);
         out.put("citiSummary", citiSummary);
+        out.put("projectRisk", projectRisk);
+        out.put("lowGtIds", subtreeLowGtIds);
         out.put("root", root);
         return out;
     }
@@ -233,6 +252,10 @@ public class DashboardController {
         int offboarding = isOffboarding(c.getCurrentStage()) ? 1 : 0;
         int lowGt = lowGtIds.contains(c.getId()) ? 1 : 0;
         int teamSize = 1;
+        // This person's OWN risk (not the rollup) - used for per-person project popups.
+        boolean atRisk = (karatFailed + offboarding + lowGt) > 0;
+        String riskReason = karatFailed > 0 ? "KARAT failed" : offboarding > 0 ? "Offboarding"
+                : lowGt > 0 ? "Low GT" : null;
 
         for (Candidate child : directs) {
             if (visited.contains(child.getId())) continue; // break cycles
@@ -256,6 +279,9 @@ public class DashboardController {
         node.put("stage", c.getCurrentStage() == null ? null : c.getCurrentStage().name());
         node.put("reportingManager", c.getReportingManager());
         node.put("citiLeadership", c.getCitiLeadership());
+        node.put("pod", c.getPod());
+        node.put("atRisk", atRisk);
+        node.put("riskReason", riskReason);
         node.put("teamSize", teamSize);
         node.put("directReports", directs.size());
         node.put("karatFailed", karatFailed);
@@ -317,8 +343,10 @@ public class DashboardController {
         return people.stream().filter(c -> c.getCurrentStage() == stage).count();
     }
 
+    /** Still actively progressing: not yet onboarded, and not a dead end (KARAT-failed) or exiting (offboarding). */
     private static boolean isInPipeline(OnboardingStage s) {
         return s != OnboardingStage.ONBOARDED
+                && s != OnboardingStage.KARAT_FAILED
                 && s != OnboardingStage.OFFBOARDING && s != OnboardingStage.OFFBOARDED;
     }
 

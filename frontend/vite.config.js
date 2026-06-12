@@ -7,6 +7,8 @@ export default defineConfig({
   base: process.env.VITE_BASE || '/',
   plugins: [react()],
   server: {
+    // Allow access through dev tunnels (e.g. *.trycloudflare.com) for peer testing.
+    allowedHosts: true,
     proxy: {
       '/api': 'http://localhost:8080',
     },

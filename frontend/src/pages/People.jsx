@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { api, STAGES, STAGE_LABELS, bandLabel } from '../api'
 import { useAuth } from '../auth'
 import { useToast } from '../toast'
@@ -11,23 +11,23 @@ const roleText = (c) => (c.role === 'MANAGER'
   ? (SENIOR_BANDS.includes(c.band) ? 'Senior Manager' : 'Manager')
   : 'Developer')
 
-// Bulk-import template: industry-standard column layout. Name/Email/Band are required.
-const TEMPLATE_COLS = ['Name', 'Email', 'Band', 'Reporting Manager Email', 'CITI Leadership', 'Wave', 'Pod', 'Location', 'Join Date', 'SOEID']
+// Bulk-import template: industry-standard column layout. Name/Email/Band/Project are required.
+const TEMPLATE_COLS = ['Name', 'Email', 'Band', 'Project', 'Reporting Manager Email', 'CITI Leadership', 'Wave', 'Join Date', 'SOEID']
 const TEMPLATE_EXAMPLES = [
-  ['Asha Verma', 'asha.verma@deloitte.com', 'b6l', 'tsbhargav@deloitte.com', 'Gonzalo', 'Wave 4', 'Payments', 'Hyderabad', '', ''],
-  ['Rohit Saxena', 'rohit.saxena@deloitte.com', 'b7', 'suresh.iyer@deloitte.com', 'Joshua', 'Wave 4', 'Cards', 'Pune', '', ''],
+  ['Asha Verma', 'asha.verma@deloitte.com', 'b6l', 'RUBY', 'tsbhargav@deloitte.com', 'Gonzalo', 'Wave 4', '', ''],
+  ['Rohit Saxena', 'rohit.saxena@deloitte.com', 'b7', 'HY', 'suresh.iyer@deloitte.com', 'Joshua', 'Wave 4', '', ''],
 ]
 // Map any reasonable header spelling to the backend field name. The reporting manager is given by
-// EMAIL (unique, typo-proof) and resolved to the manager server-side.
+// EMAIL (unique, typo-proof) and resolved to the manager server-side. Project is stored in pod.
 const FIELD_BY_HEADER = {
   name: 'name', fullname: 'name',
   email: 'email', emailaddress: 'email',
   band: 'band', grade: 'band',
+  project: 'pod', pod: 'pod', team: 'pod',
   reportingmanageremail: 'reportingManagerEmail', manageremail: 'reportingManagerEmail',
   reportingmanager: 'reportingManagerEmail', manager: 'reportingManagerEmail', reportsto: 'reportingManagerEmail',
   citileadership: 'citiLeadership', citi: 'citiLeadership', citileader: 'citiLeadership',
-  wave: 'wave', pod: 'pod', team: 'pod',
-  location: 'location', city: 'location',
+  wave: 'wave',
   joindate: 'joinDate', startdate: 'joinDate',
   soeid: 'soeid', citiid: 'soeid',
 }
@@ -141,13 +141,14 @@ function OnboardPeopleModal({ onClose, onImported }) {
         {rows.length > 0 && !result && (
           <div className="import-preview">
             <table>
-              <thead><tr><th>Name</th><th>Email</th><th>Band</th><th>Reporting Mgr (email)</th><th>CITI</th></tr></thead>
+              <thead><tr><th>Name</th><th>Email</th><th>Band</th><th>Project</th><th>Reporting Mgr (email)</th><th>CITI</th></tr></thead>
               <tbody>
                 {rows.slice(0, 6).map((r, i) => (
                   <tr key={i}>
                     <td>{r.name || <span className="bad">missing</span>}</td>
                     <td>{r.email || <span className="bad">missing</span>}</td>
                     <td>{r.band ? bandLabel(r.band) : <span className="bad">missing</span>}</td>
+                    <td>{r.pod || <span className="bad">missing</span>}</td>
                     <td>{r.reportingManagerEmail || '-'}</td>
                     <td>{r.citiLeadership || '-'}</td>
                   </tr>
@@ -195,11 +196,23 @@ export default function People() {
   const [error, setError] = useState(null)
   const [q, setQ] = useState('')
   const [stage, setStage] = useState(null) // selected stage filter
+  const [preset, setPreset] = useState(null) // filter passed in from a dashboard KPI
   const [showImport, setShowImport] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
 
   const load = () => api.candidates().then(setPeople).catch((e) => setError(e.message))
   useEffect(() => { load() }, [])
+
+  // A dashboard KPI can deep-link here. Stage filters just select the matching chip; the only
+  // non-chip case (In Pipeline) uses a preset.
+  useEffect(() => {
+    const f = location.state?.filter
+    if (!f) return
+    if (f.type === 'stage') { setStage(f.stage); setPreset(null) }
+    else if (f.type === 'pipeline') { setPreset({ kind: 'pipeline', label: 'In Pipeline' }); setStage(null) }
+    else { setStage(null); setPreset(null) } // 'all'
+  }, [location.key])
 
   // Stage counts over the full directory (independent of the search box).
   const stageCount = useMemo(() => {
@@ -208,9 +221,21 @@ export default function People() {
     return counts
   }, [people])
 
+  // A preset filter (from a dashboard KPI) matches by stage list, pipeline membership, or an id list.
+  const matchesPreset = (c) => {
+    if (!preset) return true
+    switch (preset.kind) {
+      case 'stage': return preset.stages.includes(c.currentStage)
+      case 'pipeline': return !['ONBOARDED', 'KARAT_FAILED', 'OFFBOARDING', 'OFFBOARDED'].includes(c.currentStage)
+      case 'ids': return preset.ids.includes(c.id)
+      default: return true // 'all'
+    }
+  }
+
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase()
     return people.filter((c) => {
+      if (!matchesPreset(c)) return false
       if (stage && c.currentStage !== stage) return false
       if (!term) return true
       return [
@@ -218,7 +243,7 @@ export default function People() {
         c.band, roleText(c), STAGE_LABELS[c.currentStage],
       ].some((v) => v && String(v).toLowerCase().includes(term))
     })
-  }, [people, q, stage])
+  }, [people, q, stage, preset])
 
   // Gate: only senior managers may view the full directory.
   if (!isSeniorManager) return <Navigate to="/" replace />
@@ -226,11 +251,11 @@ export default function People() {
   const managers = people.filter((p) => p.role === 'MANAGER').length
 
   const downloadSheet = () => {
-    const cols = ['Name', 'Email', 'Role', 'Band', 'Reporting Manager', 'CITI Leadership', 'Onboarding Status', 'Pod', 'Location', 'SOEID', 'Join Date']
+    const cols = ['Name', 'Email', 'Role', 'Band', 'Reporting Manager', 'CITI Leadership', 'Onboarding Status', 'Project', 'SOEID', 'Join Date']
     const rows = people.map((c) => [
       c.name, c.email, roleText(c), c.band ? bandLabel(c.band) : '',
       c.reportingManager || '', c.citiLeadership || '', STAGE_LABELS[c.currentStage] || '',
-      c.pod || '', c.location || '', c.soeid || '', c.joinDate || '',
+      c.pod || '', c.soeid || '', c.joinDate || '',
     ])
     const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
     const csv = [cols, ...rows].map((r) => r.map(esc).join(',')).join('\r\n')
@@ -252,16 +277,23 @@ export default function People() {
 
       {error && <div className="error-banner">{error}</div>}
 
+      {preset && (
+        <div className="dir-preset">
+          Showing <strong>{preset.label}</strong> · {filtered.length} {filtered.length === 1 ? 'person' : 'people'}
+          <button className="btn small secondary" onClick={() => setPreset(null)}>Clear filter</button>
+        </div>
+      )}
+
       {/* Stage distribution - each chip shows a count and filters the table when clicked */}
       <div className="dir-stats">
-        <button className={`dir-stat ${!stage ? 'active' : ''}`} onClick={() => setStage(null)}>
+        <button className={`dir-stat ${!stage && !preset ? 'active' : ''}`} onClick={() => { setStage(null); setPreset(null) }}>
           All <b>{people.length}</b>
         </button>
         {STAGES.map((s) => (
           <button
             key={s}
             className={`dir-stat ${stage === s ? 'active' : ''}`}
-            onClick={() => setStage(stage === s ? null : s)}
+            onClick={() => { setPreset(null); setStage(stage === s ? null : s) }}
           >
             <span className="dir-dot" style={{ background: stageDot(s) }} />
             {STAGE_LABELS[s]} <b>{stageCount[s] || 0}</b>
@@ -289,7 +321,7 @@ export default function People() {
           <thead>
             <tr>
               <th>Name</th><th>Role</th><th>Band</th><th>Reporting Manager</th><th>CITI Leadership</th>
-              <th>Onboarding Status</th><th>Pod</th><th>Location</th><th>SOEID</th>
+              <th>Onboarding Status</th><th>Project</th><th>SOEID</th>
             </tr>
           </thead>
           <tbody>
@@ -302,7 +334,6 @@ export default function People() {
                 <td>{c.citiLeadership || '-'}</td>
                 <td><span className={`badge ${stageBadge(c.currentStage)}`}>{STAGE_LABELS[c.currentStage]}</span></td>
                 <td>{c.pod || '-'}</td>
-                <td>{c.location || '-'}</td>
                 <td>{c.soeid || '-'}</td>
               </tr>
             ))}

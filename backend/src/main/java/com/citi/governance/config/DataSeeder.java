@@ -22,7 +22,7 @@ public class DataSeeder {
     CommandLineRunner seed(CandidateRepository candidates, StageHistoryRepository history,
                            TimesheetRepository timesheets, TrainingRepository trainings,
                            EnrollmentRepository enrollments, AppUserRepository users,
-                           AuthService auth, JdbcTemplate jdbc) {
+                           PodRepository pods, AuthService auth, JdbcTemplate jdbc) {
         return args -> {
             // The LEAD role was renamed to MANAGER - migrate any pre-existing rows before they are mapped.
             migrateLeadRole(jdbc);
@@ -36,8 +36,12 @@ public class DataSeeder {
             ensureDeveloperAccounts(users, candidates, auth);
             // Managers fill their own PTS, so each manager needs a linked candidate record.
             ensureManagerProfiles(users, candidates);
+            // Atul Raj's demo team (managers + developers) - idempotent.
+            ensureDemoPeople(candidates, history, users, auth);
             // Demo org mappings (run after manager candidate records exist).
             applyDemoOrg(jdbc);
+            // Seed the delivery projects (pods) with senior-management leads.
+            ensurePods(pods);
             // Seed a few months of delivery metrics for onboarded people so the GT Metrics page isn't empty.
             seedMetrics(jdbc);
         };
@@ -84,6 +88,12 @@ public class DataSeeder {
         // Srini -> Shubhi -> Jitendr -> {Bhargav, Suresh, Anita} -> developers.
         jdbc.update("UPDATE candidates SET reporting_manager = 'Jitendr Kumar' "
                 + "WHERE email IN ('suresh.iyer@deloitte.com','anita.desai@deloitte.com')");
+        // Atul Raj is a B5H senior manager reporting to Shubhi (a second senior-management branch).
+        jdbc.update("UPDATE candidates SET band = 'b5h' WHERE email = 'aturaj@deloitte.com'");
+        jdbc.update("UPDATE candidates SET reporting_manager = 'Shubhi Gupta' WHERE email = 'aturaj@deloitte.com'");
+        // Everyone is tied to a project (RUBY / HY / MES) via pod. Idempotent: only fills non-project pods.
+        jdbc.update("UPDATE candidates SET pod = CASE (id % 3) WHEN 0 THEN 'RUBY' WHEN 1 THEN 'HY' ELSE 'MES' END "
+                + "WHERE pod IS NULL OR pod NOT IN ('RUBY','HY','MES')");
         // The CEO reports to no one.
         jdbc.update("UPDATE candidates SET reporting_manager = NULL WHERE email = 'ssrinagakedar@deloitte.com'");
         // Assign a CITI leadership owner (Gonzalo / Joshua) to everyone - split by id, fill only blanks.
@@ -116,6 +126,7 @@ public class DataSeeder {
             {"Jitendr Kumar", "jitendrkumar@deloitte.com"},
             {"Shubhi Gupta", "shubhigupta7@deloitte.com"},
             {"Srini Nagakedar", "ssrinagakedar@deloitte.com"},
+            {"Atul Raj", "aturaj@deloitte.com"},
     };
 
     /**
@@ -224,6 +235,74 @@ public class DataSeeder {
                     }
                 });
             }
+        }
+    }
+
+    /**
+     * Idempotently seed a fixed set of demo people (Atul Raj's team). Each row creates a Candidate +
+     * linked login if the email doesn't already exist. Band sets the role; project goes in pod.
+     */
+    /** Seed the three delivery projects with senior-management leads. Idempotent. */
+    private void ensurePods(PodRepository pods) {
+        // name, leadName, leadEmail
+        String[][] seed = {
+            {"RUBY", "Atul Raj",      "aturaj@deloitte.com"},
+            {"HY",   "Jitendr Kumar", "jitendrkumar@deloitte.com"},
+            {"MES",  "Shubhi Gupta",  "shubhigupta7@deloitte.com"},
+        };
+        for (String[] s : seed) {
+            if (pods.existsByNameIgnoreCase(s[0])) continue;
+            Pod p = new Pod();
+            p.setName(s[0]);
+            p.setLeadName(s[1]);
+            p.setLeadEmail(s[2]);
+            pods.save(p);
+        }
+    }
+
+    private void ensureDemoPeople(CandidateRepository candidates, StageHistoryRepository history,
+                                  AppUserRepository users, AuthService auth) {
+        // name, email, band, reportingManager, pod(project), citiLeadership, stage
+        String[][] people = {
+            {"Naveen Rao",  "naveen.rao@deloitte.com",  "b6h", "Atul Raj",   "RUBY", "Joshua",  "ONBOARDED"},
+            {"Pooja Iyer",  "pooja.iyer@deloitte.com",  "b6l", "Naveen Rao", "RUBY", "Joshua",  "ONBOARDED"},
+            {"Sameer Khan", "sameer.khan@deloitte.com", "b7",  "Naveen Rao", "RUBY", "Gonzalo", "CARAT_INTERVIEW"},
+            {"Lata Menon",  "lata.menon@deloitte.com",  "b8",  "Atul Raj",   "RUBY", "Gonzalo", "NOMINATED"},
+        };
+        for (String[] p : people) {
+            if (candidates.findByEmail(p[1]).isPresent() || users.findByEmailIgnoreCase(p[1]).isPresent()) continue;
+            Role role = com.citi.governance.model.Bands.isManagerBand(p[2]) ? Role.MANAGER : Role.DEVELOPER;
+            OnboardingStage stage = OnboardingStage.valueOf(p[6]);
+            Candidate c = new Candidate();
+            c.setName(p[0]);
+            c.setEmail(p[1]);
+            c.setBand(p[2]);
+            c.setReportingManager(p[3]);
+            c.setPod(p[4]);
+            c.setCitiLeadership(p[5]);
+            c.setRole(role);
+            c.setCurrentStage(stage);
+            c.setLocation("Hyderabad");
+            if (stage == OnboardingStage.ONBOARDED) {
+                c.setJoinDate(LocalDate.now().minusMonths(3).withDayOfMonth(1));
+                c.setSoeid("SO" + (Math.abs(p[1].hashCode()) % 90000 + 10000));
+            }
+            Candidate saved = candidates.save(c);
+
+            StageHistory h = new StageHistory();
+            h.setCandidate(saved);
+            h.setStage(stage);
+            h.setCompletedBy("Atul Raj");
+            h.setNotes("Demo seed");
+            history.save(h);
+
+            AppUser u = new AppUser();
+            u.setName(p[0]);
+            u.setEmail(p[1]);
+            u.setPasswordHash(auth.hash(DEFAULT_PASSWORD));
+            u.setRole(role);
+            u.setCandidateId(saved.getId());
+            users.save(u);
         }
     }
 

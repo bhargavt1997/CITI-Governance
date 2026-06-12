@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { api, ALL_BANDS, bandLabel, bandRank, roleForBand } from '../api'
+import { api, ALL_BANDS, bandLabel, bandRank, roleForBand, CITI_LEADERS } from '../api'
 import { useAuth } from '../auth'
 
 export default function Login() {
@@ -10,7 +10,10 @@ export default function Login() {
   const [name, setName] = useState('')
   const [band, setBand] = useState(ALL_BANDS[0])
   const [reportingManager, setReportingManager] = useState('')
+  const [pod, setPod] = useState('')
+  const [citiLeadership, setCitiLeadership] = useState('')
   const [managers, setManagers] = useState([])
+  const [pods, setPods] = useState([])
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
 
@@ -23,6 +26,7 @@ export default function Login() {
   useEffect(() => {
     if (mode === 'register') {
       api.publicManagers().then(setManagers).catch(() => setManagers([]))
+      api.pods().then(setPods).catch(() => setPods([]))
     }
   }, [mode])
 
@@ -43,12 +47,15 @@ export default function Login() {
       if (mode === 'signin') {
         await login(email.trim(), password)
       } else {
+        if (!pod) { setError('Please select a project'); setBusy(false); return }
         await register({
           name: name.trim(),
           email: email.trim(),
           password,
           band,
           reportingManager: reportingManager || null,
+          pod,
+          citiLeadership: citiLeadership || null,
         })
       }
     } catch (err) {
@@ -116,6 +123,18 @@ export default function Login() {
             <span className="login-help">
               A reporting manager must hold a more senior band than you, so only those people are listed.
             </span>
+
+            <label className="login-label">Project</label>
+            <select value={pod} onChange={(e) => setPod(e.target.value)}>
+              <option value="">Select your project…</option>
+              {pods.map((p) => <option key={p.id} value={p.name}>{p.name}{p.leadName ? ` · ${p.leadName}` : ''}</option>)}
+            </select>
+
+            <label className="login-label">CITI leadership</label>
+            <select value={citiLeadership} onChange={(e) => setCitiLeadership(e.target.value)}>
+              <option value="">Select CITI leader…</option>
+              {CITI_LEADERS.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
           </>
         )}
 

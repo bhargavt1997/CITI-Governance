@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
 } from 'recharts'
@@ -20,9 +20,11 @@ export default function ProfileDetail() {
   const { user, isManager } = useAuth()
   const { setLabel } = useCrumbs()
   const toast = useToast()
+  const navigate = useNavigate()
   const { id } = useParams()
   const [c, setC] = useState(null)
   const [enrollments, setEnrollments] = useState([])
+  const [allPeople, setAllPeople] = useState([])
   const [error, setError] = useState(null)
   const [editSkills, setEditSkills] = useState(false)
   const [skillDraft, setSkillDraft] = useState({})
@@ -40,6 +42,8 @@ export default function ProfileDetail() {
   useEffect(() => { load() }, [id])
   // Fetch managers for everyone (used for the reporting-manager email tooltip; managers also use it to remap).
   useEffect(() => { api.managers().then(setLeads).catch(() => {}) }, [])
+  // All people, to list this person's direct reportees.
+  useEffect(() => { api.candidates().then(setAllPeople).catch(() => {}) }, [])
 
   const saveManager = async () => {
     try {
@@ -75,7 +79,9 @@ export default function ProfileDetail() {
     }
   }
 
-  const DETAIL_FIELDS = ['employeeId', 'band', 'wave', 'pod', 'location', 'joinDate', 'skillGaps', 'allocations', 'activities']
+  const offboarding = c.currentStage === 'OFFBOARDING' || c.currentStage === 'OFFBOARDED'
+  const DETAIL_FIELDS = ['employeeId', 'band', 'wave', 'pod', 'location', 'joinDate', 'skillGaps',
+    'allocations', 'activities', 'remarks', ...(offboarding ? ['offboardingReason'] : [])]
   const startEditDetails = () => {
     const d = {}
     DETAIL_FIELDS.forEach((f) => { d[f] = c[f] ?? '' })
@@ -102,6 +108,9 @@ export default function ProfileDetail() {
   }
   const setField = (f) => (e) => setDetailsDraft((d) => ({ ...d, [f]: e.target.value }))
   const canEditProfile = isManager || user.candidateId === c.id
+  // This person's direct reportees (if they manage anyone).
+  const reportees = allPeople.filter((p) => p.reportingManager && c.name && p.reportingManager === c.name)
+  const stageBadge = (s) => (s === 'ONBOARDED' ? 'green' : s === 'KARAT_FAILED' ? 'red' : s === 'OFFBOARDING' ? 'amber' : s === 'OFFBOARDED' ? 'gray' : s === 'NOMINATED' ? 'gray' : 'blue')
 
   return (
     <div>
@@ -114,11 +123,6 @@ export default function ProfileDetail() {
         <span className={`badge ${c.currentStage === 'ONBOARDED' ? 'green' : c.currentStage === 'KARAT_FAILED' ? 'red' : c.currentStage === 'OFFBOARDING' ? 'amber' : c.currentStage === 'OFFBOARDED' ? 'gray' : 'blue'}`}>{STAGE_LABELS[c.currentStage]}</span>
       </p>
 
-      {(c.currentStage === 'OFFBOARDING' || c.currentStage === 'OFFBOARDED') && c.offboardingReason && (
-        <div className="error-banner" style={{ background: 'var(--amber-bg)', color: 'var(--amber)', borderColor: '#f3dcb0' }}>
-          <strong>Offboarding reason:</strong> {c.offboardingReason}
-        </div>
-      )}
 
       <div className="two-col">
         <div className="card">
@@ -143,7 +147,7 @@ export default function ProfileDetail() {
                 )}
                 <div className="field"><label>Band</label><div>{c.band ? bandLabel(c.band) : '-'}</div></div>
                 <div className="field"><label>Wave</label><div>{c.wave || '-'}</div></div>
-                <div className="field"><label>Pod</label><div>{c.pod || '-'}</div></div>
+                <div className="field"><label>Project</label><div>{c.pod || '-'}</div></div>
                 <div className="field"><label>Location</label><div>{c.location || '-'}</div></div>
                 <div className="field"><label>Join Date</label><div>{c.joinDate || '-'}</div></div>
                 <div className="field"><label>CITI Leadership</label><div>{c.citiLeadership || '-'}</div></div>
@@ -177,12 +181,20 @@ export default function ProfileDetail() {
                   )}
                 </div>
               </div>
+              {offboarding && (
+                <>
+                  <h3 style={{ marginTop: 18, color: 'var(--amber)' }}>Reason for Offboarding</h3>
+                  <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>{c.offboardingReason || 'No reason recorded.'}</p>
+                </>
+              )}
               <h3 style={{ marginTop: 18 }}>Skill Gaps</h3>
               <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>{c.skillGaps || 'None recorded.'}</p>
               <h3 style={{ marginTop: 18 }}>Allocations</h3>
               <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>{c.allocations || 'Not allocated yet.'}</p>
               <h3 style={{ marginTop: 18 }}>Activities</h3>
               <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>{c.activities || 'No activities recorded.'}</p>
+              <h3 style={{ marginTop: 18 }}>Remarks</h3>
+              <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>{c.remarks || 'No remarks.'}</p>
             </>
           ) : (
             <div className="field-grid">
@@ -204,12 +216,19 @@ export default function ProfileDetail() {
                 </select>
               </div>
               <div className="field"><label>Wave</label><input type="text" value={detailsDraft.wave} onChange={setField('wave')} /></div>
-              <div className="field"><label>Pod</label><input type="text" value={detailsDraft.pod} onChange={setField('pod')} /></div>
+              <div className="field"><label>Project</label><input type="text" value={detailsDraft.pod} onChange={setField('pod')} /></div>
               <div className="field"><label>Location</label><input type="text" value={detailsDraft.location} onChange={setField('location')} /></div>
               <div className="field"><label>Join Date</label><input type="date" value={detailsDraft.joinDate || ''} onChange={setField('joinDate')} /></div>
               <div className="field" style={{ gridColumn: '1 / -1' }}><label>Skill Gaps</label><textarea rows={2} value={detailsDraft.skillGaps} onChange={setField('skillGaps')} /></div>
               <div className="field" style={{ gridColumn: '1 / -1' }}><label>Allocations</label><textarea rows={2} value={detailsDraft.allocations} onChange={setField('allocations')} /></div>
               <div className="field" style={{ gridColumn: '1 / -1' }}><label>Activities</label><textarea rows={2} value={detailsDraft.activities} onChange={setField('activities')} /></div>
+              {offboarding && (
+                <div className="field" style={{ gridColumn: '1 / -1' }}>
+                  <label>Reason for Offboarding</label>
+                  <textarea rows={2} value={detailsDraft.offboardingReason} onChange={setField('offboardingReason')} placeholder="Why is this person being offboarded?" />
+                </div>
+              )}
+              <div className="field" style={{ gridColumn: '1 / -1' }}><label>Remarks</label><textarea rows={2} value={detailsDraft.remarks} onChange={setField('remarks')} placeholder="Any notes about this person…" /></div>
             </div>
           )}
         </div>
@@ -286,6 +305,27 @@ export default function ProfileDetail() {
           </p>
         )}
       </div>
+
+      {reportees.length > 0 && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <h3>Reportees · {reportees.length}</h3>
+          <table>
+            <thead>
+              <tr><th>Name</th><th>Band</th><th>Project</th><th>Stage</th></tr>
+            </thead>
+            <tbody>
+              {reportees.map((r) => (
+                <tr key={r.id} className="clickable" onClick={() => navigate(`/profiles/${r.id}`)}>
+                  <td><strong>{r.name}</strong></td>
+                  <td>{r.band ? bandLabel(r.band) : '-'}</td>
+                  <td>{r.pod || '-'}</td>
+                  <td><span className={`badge ${stageBadge(r.currentStage)}`}>{STAGE_LABELS[r.currentStage]}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }

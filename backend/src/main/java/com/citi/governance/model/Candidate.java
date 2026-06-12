@@ -40,6 +40,10 @@ public class Candidate {
     @Column(columnDefinition = "text")
     private String offboardingReason;
 
+    /** Free-text remarks / notes about this person. */
+    @Column(columnDefinition = "text")
+    private String remarks;
+
     @Enumerated(EnumType.STRING)
     private OnboardingStage currentStage = OnboardingStage.NOMINATED;
 
@@ -92,6 +96,8 @@ public class Candidate {
     public void setCitiLeadership(String citiLeadership) { this.citiLeadership = citiLeadership; }
     public String getOffboardingReason() { return offboardingReason; }
     public void setOffboardingReason(String offboardingReason) { this.offboardingReason = offboardingReason; }
+    public String getRemarks() { return remarks; }
+    public void setRemarks(String remarks) { this.remarks = remarks; }
     public OnboardingStage getCurrentStage() { return currentStage; }
     public void setCurrentStage(OnboardingStage currentStage) { this.currentStage = currentStage; }
     public Integer getSkillTechnical() { return skillTechnical; }

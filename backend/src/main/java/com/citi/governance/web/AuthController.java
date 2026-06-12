@@ -81,6 +81,8 @@ public class AuthController {
         String password = body.getOrDefault("password", "");
         String reportingManager = trimToNull(body.get("reportingManager"));
         String band = trimToNull(body.get("band"));
+        String pod = trimToNull(body.get("pod"));
+        String citiLeadership = trimToNull(body.get("citiLeadership"));
 
         if (name.isBlank() || email.isBlank() || password.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name, email and password are required");
@@ -94,6 +96,10 @@ public class AuthController {
         }
         if (!Bands.isValid(band)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown band");
+        }
+        // Everyone is tied to a project (stored in pod).
+        if (pod == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Project is required");
         }
         Role role = Bands.isManagerBand(band) ? Role.MANAGER : Role.DEVELOPER;
         if (users.findByEmailIgnoreCase(email).isPresent() || candidates.findByEmail(email).isPresent()) {
@@ -122,11 +128,10 @@ public class AuthController {
         c.setRole(role);
         c.setReportingManager(reportingManager);
         c.setBand(band);
+        c.setPod(pod);
+        c.setCitiLeadership(citiLeadership);
         // New registrations start in the NOMINATED stage by default.
         c.setCurrentStage(OnboardingStage.NOMINATED);
-        if (role == Role.MANAGER) {
-            c.setPod("Leadership");
-        }
         Candidate saved = candidates.save(c);
 
         StageHistory h = new StageHistory();

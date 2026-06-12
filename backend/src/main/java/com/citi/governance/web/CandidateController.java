@@ -91,9 +91,13 @@ public class CandidateController {
                 String name = str(row.get("name"));
                 String email = str(row.get("email")).toLowerCase();
                 String band = str(row.get("band")).toLowerCase();
+                String pod = str(row.get("pod"));
 
                 if (name.isBlank() || email.isBlank() || band.isBlank()) {
                     throw new IllegalArgumentException("Name, Email and Band are required");
+                }
+                if (pod.isBlank()) {
+                    throw new IllegalArgumentException("Project is required");
                 }
                 if (!Bands.isValid(band)) {
                     throw new IllegalArgumentException("Unknown band '" + band + "'");
@@ -122,7 +126,7 @@ public class CandidateController {
                 }
                 c.setCitiLeadership(strOrNull(row.get("citiLeadership")));
                 c.setWave(strOrNull(row.get("wave")));
-                c.setPod(role == Role.MANAGER && str(row.get("pod")).isBlank() ? "Leadership" : strOrNull(row.get("pod")));
+                c.setPod(pod);
                 c.setLocation(strOrNull(row.get("location")));
                 String joinDate = str(row.get("joinDate"));
                 if (!joinDate.isBlank()) {
@@ -182,6 +186,7 @@ public class CandidateController {
         if (in.getReportingManager() != null) c.setReportingManager(in.getReportingManager());
         if (in.getCitiLeadership() != null) c.setCitiLeadership(in.getCitiLeadership());
         if (in.getOffboardingReason() != null) c.setOffboardingReason(in.getOffboardingReason());
+        if (in.getRemarks() != null) c.setRemarks(in.getRemarks());
         if (in.getSkillGaps() != null) c.setSkillGaps(in.getSkillGaps());
         if (in.getAllocations() != null) c.setAllocations(in.getAllocations());
         if (in.getActivities() != null) c.setActivities(in.getActivities());

@@ -14,6 +14,7 @@ import TrainingDetail from './pages/TrainingDetail.jsx'
 import KaratAssessment from './pages/KaratAssessment.jsx'
 import People from './pages/People.jsx'
 import Metrics from './pages/Metrics.jsx'
+import Projects from './pages/Projects.jsx'
 
 const CRUMB_NAMES = {
   '': 'Dashboard',
@@ -24,6 +25,7 @@ const CRUMB_NAMES = {
   training: 'Training',
   karat: 'KARAT Assessment',
   people: 'CITI Org Directory',
+  projects: 'Projects',
 }
 
 function Breadcrumb() {
@@ -160,6 +162,7 @@ function Shell() {
           <NavLink to="/training">Training</NavLink>
           <NavLink to="/karat">KARAT Assessment</NavLink>
           {isSeniorManager && <NavLink to="/people">CITI Org Directory</NavLink>}
+          {isSeniorManager && <NavLink to="/projects">Projects</NavLink>}
         </nav>
         <div className="sidebar-foot">
           Signed in as <strong>{user.name.split(' ')[0]}</strong> · {roleLabel}
@@ -215,6 +218,7 @@ export default function App() {
         <Route path="/training/:id" element={<TrainingDetail />} />
         <Route path="/karat" element={<KaratAssessment />} />
         <Route path="/people" element={<People />} />
+        <Route path="/projects" element={<Projects />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
