@@ -34,18 +34,20 @@ export const api = {
 
   // Dashboard
   dashboardSummary: () => request('/dashboard/summary'),
+  riskSummary: () => request('/dashboard/risk'),
 
   // Candidates
   candidates: (q) => request(`/candidates${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   candidate: (id) => request(`/candidates/${id}`),
   createCandidate: (data) => request('/candidates', { method: 'POST', body: JSON.stringify(data) }),
+  bulkCandidates: (people) => request('/candidates/bulk', { method: 'POST', body: JSON.stringify({ people }) }),
   updateCandidate: (id, data) => request(`/candidates/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   setSoeid: (id, soeid) => request(`/candidates/${id}/soeid`, { method: 'POST', body: JSON.stringify({ soeid }) }),
   updateSkills: (id, skills) => request(`/candidates/${id}/skills`, { method: 'PUT', body: JSON.stringify(skills) }),
   advanceStage: (id, notes) =>
     request(`/candidates/${id}/advance-stage`, { method: 'POST', body: JSON.stringify({ notes }) }),
-  setStage: (id, stage, notes) =>
-    request(`/candidates/${id}/stage`, { method: 'POST', body: JSON.stringify({ stage, notes }) }),
+  setStage: (id, stage, notes, offboardingReason) =>
+    request(`/candidates/${id}/stage`, { method: 'POST', body: JSON.stringify({ stage, notes, offboardingReason }) }),
   stageHistory: (id) => request(`/candidates/${id}/stage-history`),
   candidateEnrollments: (id) => request(`/candidates/${id}/enrollments`),
 
@@ -79,9 +81,11 @@ export const api = {
 
 // Career bands. Stored lowercase; displayed uppercase (use bandLabel). Manager-eligible vs developer bands
 // form a clean split.
-export const ALL_BANDS = ['b8', 'b7', 'b6l', 'b6h', 'b5l', 'b5h', 'b4l', 'b4h']
-export const MANAGER_BANDS = ['b6h', 'b5l', 'b5h', 'b4l', 'b4h']
+export const ALL_BANDS = ['b8', 'b7', 'b6l', 'b6h', 'b5l', 'b5h', 'b4l', 'b4h', 'b2']
+export const MANAGER_BANDS = ['b6h', 'b5l', 'b5h', 'b4l', 'b4h', 'b2']
 export const DEVELOPER_BANDS = ['b8', 'b7', 'b6l']
+// Top-level leadership (B4L and above, including the CEO band b2) get the org-wide risk view.
+export const LEADERSHIP_BANDS = ['b4l', 'b4h', 'b2']
 export const bandLabel = (b) => (b ? String(b).toUpperCase() : '')
 // Seniority rank by band order (b8 lowest .. b4h highest). Higher = more senior.
 export const bandRank = (b) => ALL_BANDS.indexOf(b)
@@ -98,6 +102,8 @@ export const STAGES = [
   'CITI_CLEARANCE_RECEIVED',
   'VDI_SETUP_IN_PROGRESS',
   'ONBOARDED',
+  'OFFBOARDING',
+  'OFFBOARDED',
 ]
 
 // SOEID is only relevant once onboarding has started - hide it (value or "pending") before that stage.
@@ -113,4 +119,6 @@ export const STAGE_LABELS = {
   CITI_CLEARANCE_RECEIVED: 'Citi Clearance Received',
   VDI_SETUP_IN_PROGRESS: 'VDI Setup In Progress',
   ONBOARDED: 'Onboarded',
+  OFFBOARDING: 'Offboarding',
+  OFFBOARDED: 'Offboarded',
 }

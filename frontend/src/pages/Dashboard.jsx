@@ -7,6 +7,7 @@ import {
 import { api, STAGE_LABELS } from '../api'
 import { useAuth } from '../auth'
 import DeveloperDashboard from './DeveloperDashboard.jsx'
+import LeadershipDashboard from './LeadershipDashboard.jsx'
 
 // One cohesive palette: an indigo ramp (the app's accent) for pipeline stages,
 // plus the app's semantic red (failed) and green (onboarded) used elsewhere.
@@ -20,6 +21,8 @@ const STAGE_PIE = {
   'Citi Clearance Received': '#4338ca',
   'VDI Setup In Progress': '#3730a3',
   'Onboarded': '#059669',
+  'Offboarding': '#f59e0b',
+  'Offboarded': '#64748b',
 }
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 export const monthShort = (m) => MONTHS[Number(String(m).split('-')[1]) - 1] || m
@@ -27,6 +30,8 @@ export const monthShort = (m) => MONTHS[Number(String(m).split('-')[1]) - 1] || 
 const stageBadge = (stage) => {
   if (stage === 'ONBOARDED') return 'green'
   if (stage === 'KARAT_FAILED') return 'red'
+  if (stage === 'OFFBOARDING') return 'amber'
+  if (stage === 'OFFBOARDED') return 'gray'
   if (stage === 'NOMINATED') return 'gray'
   return 'blue'
 }
@@ -158,6 +163,7 @@ function ManagerDashboard() {
 }
 
 export default function Dashboard() {
-  const { isManager } = useAuth()
+  const { isManager, isLeadership } = useAuth()
+  if (isLeadership) return <LeadershipDashboard />
   return isManager ? <ManagerDashboard /> : <DeveloperDashboard />
 }

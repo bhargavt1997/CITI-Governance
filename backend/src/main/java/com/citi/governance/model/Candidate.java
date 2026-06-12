@@ -33,6 +33,13 @@ public class Candidate {
     private LocalDate joinDate;
     private String reportingManager;
 
+    /** CITI leadership owner for this person (e.g. "Gonzalo" or "Joshua"). */
+    private String citiLeadership;
+
+    /** Reason captured when the person enters the Offboarding stage. */
+    @Column(columnDefinition = "text")
+    private String offboardingReason;
+
     @Enumerated(EnumType.STRING)
     private OnboardingStage currentStage = OnboardingStage.NOMINATED;
 
@@ -81,6 +88,10 @@ public class Candidate {
     public void setJoinDate(LocalDate joinDate) { this.joinDate = joinDate; }
     public String getReportingManager() { return reportingManager; }
     public void setReportingManager(String reportingManager) { this.reportingManager = reportingManager; }
+    public String getCitiLeadership() { return citiLeadership; }
+    public void setCitiLeadership(String citiLeadership) { this.citiLeadership = citiLeadership; }
+    public String getOffboardingReason() { return offboardingReason; }
+    public void setOffboardingReason(String offboardingReason) { this.offboardingReason = offboardingReason; }
     public OnboardingStage getCurrentStage() { return currentStage; }
     public void setCurrentStage(OnboardingStage currentStage) { this.currentStage = currentStage; }
     public Integer getSkillTechnical() { return skillTechnical; }

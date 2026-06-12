@@ -24,11 +24,21 @@ export default function Onboarding() {
 
   const moveTo = async (c, stage) => {
     if (!c || stage === c.currentStage) return
+    // Starting offboarding requires a reason (shown on hover on the card).
+    let offboardingReason
+    if (stage === 'OFFBOARDING') {
+      offboardingReason = window.prompt(`Why is ${c.name} being offboarded?`, c.offboardingReason || '')
+      if (offboardingReason == null) return // cancelled
+      offboardingReason = offboardingReason.trim()
+      if (!offboardingReason) { toast.warning('An offboarding reason is required.'); return }
+    }
     const prevStage = c.currentStage
     // optimistic update
-    setCandidates((cs) => cs.map((x) => (x.id === c.id ? { ...x, currentStage: stage } : x)))
+    setCandidates((cs) => cs.map((x) => (x.id === c.id
+      ? { ...x, currentStage: stage, ...(offboardingReason ? { offboardingReason } : {}) }
+      : x)))
     try {
-      await api.setStage(c.id, stage)
+      await api.setStage(c.id, stage, undefined, offboardingReason)
       toast.success(`${c.name} moved to ${STAGE_LABELS[stage]}.`, { title: 'Stage updated' })
     } catch (e) {
       // roll the card back to where it was and explain why
@@ -74,10 +84,11 @@ export default function Onboarding() {
         {STAGES.map((s) => {
           const cards = byStage(s)
           const done = s === 'ONBOARDED'
+          const offboard = s === 'OFFBOARDING' || s === 'OFFBOARDED'
           return (
             <div
               key={s}
-              className={`lane ${done ? 'done' : ''} ${s === 'KARAT_FAILED' ? 'failed' : ''} ${dropStage === s ? 'drop' : ''}`}
+              className={`lane ${done ? 'done' : ''} ${s === 'KARAT_FAILED' ? 'failed' : ''} ${offboard ? 'offboard' : ''} ${dropStage === s ? 'drop' : ''}`}
               onDragOver={isManager ? (e) => { e.preventDefault(); if (dropStage !== s) setDropStage(s) } : undefined}
               onDragLeave={isManager ? () => setDropStage((p) => (p === s ? null : p)) : undefined}
               onDrop={isManager ? () => onDrop(s) : undefined}
@@ -106,6 +117,9 @@ export default function Onboarding() {
                       {soeidVisible(c.currentStage) && (c.soeid
                         ? <span className="badge blue">{c.soeid}</span>
                         : <span className="badge amber">SOEID pending</span>)}
+                      {offboard && c.offboardingReason && (
+                        <span className="badge amber" title={c.offboardingReason}>Reason ⓘ</span>
+                      )}
                     </div>
                   </div>
                 ))}
