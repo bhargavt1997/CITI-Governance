@@ -154,9 +154,9 @@ function Shell() {
         <nav>
           <NavLink to="/" end>Dashboard</NavLink>
           <NavLink to="/pts">PTS</NavLink>
-          {isOnboarded && <NavLink to="/metrics">GT Metrics</NavLink>}
           {isManager && <NavLink to="/onboarding">Onboarding</NavLink>}
           <NavLink to="/profiles">My Team</NavLink>
+          {isOnboarded && <NavLink to="/metrics">GT Metrics</NavLink>}
           <NavLink to="/training">Training</NavLink>
           <NavLink to="/karat">KARAT Assessment</NavLink>
           {isSeniorManager && <NavLink to="/people">CITI Org Directory</NavLink>}
