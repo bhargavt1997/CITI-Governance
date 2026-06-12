@@ -1,6 +1,7 @@
 package com.citi.governance.web;
 
 import com.citi.governance.model.AppUser;
+import com.citi.governance.model.Candidate;
 import com.citi.governance.model.OnboardingStage;
 import com.citi.governance.model.Role;
 import com.citi.governance.repo.AppUserRepository;
@@ -30,7 +31,12 @@ public class UserController {
         return users.findAll().stream()
                 .filter(u -> u.getRole() == Role.MANAGER)
                 .filter(this::isOnboarded)
-                .map(u -> Map.<String, Object>of("id", u.getId(), "name", u.getName(), "email", u.getEmail()))
+                .map(u -> {
+                    String band = u.getCandidateId() == null ? ""
+                            : candidates.findById(u.getCandidateId()).map(Candidate::getBand).orElse("");
+                    return Map.<String, Object>of("id", u.getId(), "name", u.getName(),
+                            "email", u.getEmail(), "band", band == null ? "" : band);
+                })
                 .toList();
     }
 

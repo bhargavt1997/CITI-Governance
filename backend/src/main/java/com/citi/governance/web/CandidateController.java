@@ -77,21 +77,18 @@ public class CandidateController {
         return candidates.save(c);
     }
 
-    /** SOEID can be set once if missing at registration; afterwards it is locked. */
+    /** A SOEID may be assigned/edited by the candidate's manager, but only once onboarding has started. */
     @PostMapping("/{id}/soeid")
     public Candidate setSoeid(@PathVariable Long id, @RequestBody Map<String, String> body, HttpServletRequest req) {
-        auth.requireManagerOrSelf(req, id);
+        auth.requireManager(req);
         Candidate c = get(id);
         if (c.getCurrentStage().ordinal() < OnboardingStage.ONBOARDING_INITIATED.ordinal()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "SOEID can be added only once onboarding has started");
-        }
-        if (c.getSoeid() != null && !c.getSoeid().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "SOEID already set and cannot be changed");
+                    "A SOEID can be assigned only once onboarding has started.");
         }
         String soeid = body.get("soeid");
         if (soeid == null || soeid.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "soeid is required");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A SOEID is required.");
         }
         c.setSoeid(soeid.trim().toUpperCase());
         return candidates.save(c);
@@ -157,7 +154,7 @@ public class CandidateController {
         // A candidate must have a SOEID before they can be onboarded.
         if (target == OnboardingStage.ONBOARDED && (c.getSoeid() == null || c.getSoeid().isBlank())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Add a SOEID before onboarding this candidate");
+                    "Cannot move to Onboarded until a SOEID is assigned to " + c.getName() + ".");
         }
         c.setCurrentStage(target);
         // Joining date is the day the candidate is onboarded.

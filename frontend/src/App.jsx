@@ -13,10 +13,12 @@ import Training from './pages/Training.jsx'
 import TrainingDetail from './pages/TrainingDetail.jsx'
 import KaratAssessment from './pages/KaratAssessment.jsx'
 import People from './pages/People.jsx'
+import Metrics from './pages/Metrics.jsx'
 
 const CRUMB_NAMES = {
   '': 'Dashboard',
   pts: 'PTS',
+  metrics: 'GT Metrics',
   onboarding: 'Onboarding',
   profiles: 'My Team',
   training: 'Training',
@@ -142,7 +144,7 @@ function UserMenu() {
 }
 
 function Shell() {
-  const { user, isManager, isSeniorManager, roleLabel } = useAuth()
+  const { user, isManager, isSeniorManager, isOnboarded, roleLabel } = useAuth()
   return (
     <div className="app">
       <aside className="sidebar">
@@ -152,6 +154,7 @@ function Shell() {
         <nav>
           <NavLink to="/" end>Dashboard</NavLink>
           <NavLink to="/pts">PTS</NavLink>
+          {isOnboarded && <NavLink to="/metrics">GT Metrics</NavLink>}
           {isManager && <NavLink to="/onboarding">Onboarding</NavLink>}
           <NavLink to="/profiles">My Team</NavLink>
           <NavLink to="/training">Training</NavLink>
@@ -204,6 +207,7 @@ export default function App() {
       <Route element={<RequireAuth />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/pts" element={<Timesheet />} />
+        <Route path="/metrics" element={<Metrics />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/profiles" element={<Profiles />} />
         <Route path="/profiles/:id" element={<ProfileDetail />} />

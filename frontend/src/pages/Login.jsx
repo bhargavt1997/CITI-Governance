@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { api, MANAGER_BANDS, DEVELOPER_BANDS, bandLabel } from '../api'
+import { useEffect, useMemo, useState } from 'react'
+import { api, ALL_BANDS, bandLabel, bandRank, roleForBand } from '../api'
 import { useAuth } from '../auth'
 
 export default function Login() {
@@ -8,24 +8,30 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
-  const [role, setRole] = useState('DEVELOPER')
-  const [band, setBand] = useState(DEVELOPER_BANDS[0])
+  const [band, setBand] = useState(ALL_BANDS[0])
   const [reportingManager, setReportingManager] = useState('')
   const [managers, setManagers] = useState([])
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
 
-  const bandOptions = role === 'MANAGER' ? MANAGER_BANDS : DEVELOPER_BANDS
-  const pickRole = (r) => {
-    setRole(r)
-    setBand((r === 'MANAGER' ? MANAGER_BANDS : DEVELOPER_BANDS)[0])
-  }
+  // Only people at a more senior band can be your reporting manager.
+  const eligibleManagers = useMemo(
+    () => managers.filter((m) => bandRank(m.band) > bandRank(band)),
+    [managers, band],
+  )
 
   useEffect(() => {
     if (mode === 'register') {
       api.publicManagers().then(setManagers).catch(() => setManagers([]))
     }
   }, [mode])
+
+  // If the chosen manager is no longer senior enough after a band change, drop the selection.
+  useEffect(() => {
+    if (reportingManager && !eligibleManagers.some((m) => m.name === reportingManager)) {
+      setReportingManager('')
+    }
+  }, [eligibleManagers, reportingManager])
 
   const switchMode = (m) => { setMode(m); setError(null) }
 
@@ -41,7 +47,6 @@ export default function Login() {
           name: name.trim(),
           email: email.trim(),
           password,
-          role,
           band,
           reportingManager: reportingManager || null,
         })
@@ -90,45 +95,26 @@ export default function Login() {
 
         {isRegister && (
           <>
-            <label className="login-label">I am a</label>
-            <div className="role-toggle">
-              <button
-                type="button"
-                className={role === 'DEVELOPER' ? 'active' : ''}
-                onClick={() => pickRole('DEVELOPER')}
-              >
-                Developer
-              </button>
-              <button
-                type="button"
-                className={role === 'MANAGER' ? 'active' : ''}
-                onClick={() => pickRole('MANAGER')}
-              >
-                Manager
-              </button>
-            </div>
-
             <label className="login-label">Band</label>
             <select value={band} onChange={(e) => setBand(e.target.value)}>
-              {bandOptions.map((b) => <option key={b} value={b}>{bandLabel(b)}</option>)}
+              {ALL_BANDS.map((b) => <option key={b} value={b}>{bandLabel(b)}</option>)}
             </select>
             <span className="login-help">
-              {role === 'MANAGER'
-                ? 'Manager-eligible bands: B6H, B5L, B5H, B4L, B4H.'
-                : 'Developer bands: B8, B7, B6L.'}
+              Your band sets your role: B6H and above join as a Manager, B6L and below as a Developer.
+              You will join as a <strong>{roleForBand(band)}</strong>.
             </span>
 
             <label className="login-label">Reporting manager</label>
             <select value={reportingManager} onChange={(e) => setReportingManager(e.target.value)}>
               <option value="">
-                {managers.length ? 'Select your manager…' : 'No managers yet - leave blank'}
+                {eligibleManagers.length ? 'Select your manager…' : 'No senior manager available - leave blank'}
               </option>
-              {managers.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
+              {eligibleManagers.map((m) => (
+                <option key={m.id} value={m.name}>{m.name} · {bandLabel(m.band)}</option>
+              ))}
             </select>
             <span className="login-help">
-              {role === 'MANAGER'
-                ? 'Optional - managers can report to another manager.'
-                : 'Your manager approves your PTS timesheets.'}
+              A reporting manager must hold a more senior band than you, so only those people are listed.
             </span>
           </>
         )}

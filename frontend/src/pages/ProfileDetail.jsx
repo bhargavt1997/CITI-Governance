@@ -3,9 +3,10 @@ import { useParams } from 'react-router-dom'
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
 } from 'recharts'
-import { api, STAGE_LABELS, ALL_BANDS, bandLabel, soeidVisible } from '../api'
+import { api, STAGE_LABELS, ALL_BANDS, bandLabel, bandRank, soeidVisible } from '../api'
 import { useAuth } from '../auth'
 import { useCrumbs } from '../crumbs'
+import { useToast } from '../toast'
 
 const AXES = [
   { key: 'skillTechnical', label: 'Technical', field: 'technical' },
@@ -18,13 +19,13 @@ const AXES = [
 export default function ProfileDetail() {
   const { user, isManager } = useAuth()
   const { setLabel } = useCrumbs()
+  const toast = useToast()
   const { id } = useParams()
   const [c, setC] = useState(null)
   const [enrollments, setEnrollments] = useState([])
   const [error, setError] = useState(null)
   const [editSkills, setEditSkills] = useState(false)
   const [skillDraft, setSkillDraft] = useState({})
-  const [toast, setToast] = useState(null)
   const [leads, setLeads] = useState([])
   const [editManager, setEditManager] = useState(false)
   const [managerDraft, setManagerDraft] = useState('')
@@ -45,11 +46,9 @@ export default function ProfileDetail() {
       const updated = await api.updateCandidate(c.id, { reportingManager: managerDraft })
       setC(updated)
       setEditManager(false)
-      setToast('Reporting manager updated ✓')
-      setTimeout(() => setToast(null), 2500)
+      toast.success('Reporting manager updated.', { title: 'Saved' })
     } catch (e) {
-      setToast(e.message)
-      setTimeout(() => setToast(null), 4000)
+      toast.error(e.message, { title: 'Could not update manager' })
     }
   }
 
@@ -70,11 +69,9 @@ export default function ProfileDetail() {
       const updated = await api.updateSkills(c.id, skillDraft)
       setC(updated)
       setEditSkills(false)
-      setToast('Skill profile updated ✓')
-      setTimeout(() => setToast(null), 2500)
+      toast.success('Skill profile updated.', { title: 'Saved' })
     } catch (e) {
-      setToast(e.message)
-      setTimeout(() => setToast(null), 4000)
+      toast.error(e.message, { title: 'Could not save skills' })
     }
   }
 
@@ -82,6 +79,7 @@ export default function ProfileDetail() {
   const startEditDetails = () => {
     const d = {}
     DETAIL_FIELDS.forEach((f) => { d[f] = c[f] ?? '' })
+    d.soeid = c.soeid ?? ''
     setDetailsDraft(d)
     setEditDetails(true)
   }
@@ -89,14 +87,17 @@ export default function ProfileDetail() {
     try {
       const payload = {}
       DETAIL_FIELDS.forEach((f) => { payload[f] = detailsDraft[f] === '' ? null : detailsDraft[f] })
-      const updated = await api.updateCandidate(c.id, payload)
+      let updated = await api.updateCandidate(c.id, payload)
+      // SOEID has its own endpoint and rules: only a manager can set it, and only once onboarding has started.
+      const newSoeid = (detailsDraft.soeid || '').trim().toUpperCase()
+      if (isManager && soeidVisible(c.currentStage) && newSoeid && newSoeid !== (c.soeid || '')) {
+        updated = await api.setSoeid(c.id, newSoeid)
+      }
       setC(updated)
       setEditDetails(false)
-      setToast('Profile updated ✓')
-      setTimeout(() => setToast(null), 2500)
+      toast.success('Profile updated.')
     } catch (e) {
-      setToast(e.message)
-      setTimeout(() => setToast(null), 4000)
+      toast.error(e.message)
     }
   }
   const setField = (f) => (e) => setDetailsDraft((d) => ({ ...d, [f]: e.target.value }))
@@ -131,6 +132,9 @@ export default function ProfileDetail() {
             <>
               <div className="field-grid">
                 <div className="field"><label>Employee ID</label><div>{c.employeeId || '-'}</div></div>
+                {soeidVisible(c.currentStage) && (
+                  <div className="field"><label>SOEID</label><div>{c.soeid || 'Not assigned'}</div></div>
+                )}
                 <div className="field"><label>Band</label><div>{c.band ? bandLabel(c.band) : '-'}</div></div>
                 <div className="field"><label>Wave</label><div>{c.wave || '-'}</div></div>
                 <div className="field"><label>Pod</label><div>{c.pod || '-'}</div></div>
@@ -156,7 +160,9 @@ export default function ProfileDetail() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       <select value={managerDraft} onChange={(e) => setManagerDraft(e.target.value)}>
                         <option value="">Select manager…</option>
-                        {leads.map((l) => <option key={l.id} value={l.name}>{l.name}</option>)}
+                        {leads
+                          .filter((l) => bandRank(l.band) > bandRank(c.band))
+                          .map((l) => <option key={l.id} value={l.name}>{l.name} · {bandLabel(l.band)}</option>)}
                       </select>
                       <button className="btn small" disabled={!managerDraft} onClick={saveManager}>Save</button>
                       <button className="btn small secondary" onClick={() => setEditManager(false)}>Cancel</button>
@@ -174,6 +180,16 @@ export default function ProfileDetail() {
           ) : (
             <div className="field-grid">
               <div className="field"><label>Employee ID</label><input type="text" value={detailsDraft.employeeId} onChange={setField('employeeId')} /></div>
+              {isManager && (
+                <div className="field">
+                  <label>SOEID</label>
+                  {soeidVisible(c.currentStage) ? (
+                    <input type="text" value={detailsDraft.soeid || ''} onChange={setField('soeid')} placeholder="e.g. AB12345" />
+                  ) : (
+                    <input type="text" disabled value="" placeholder="Available once onboarding starts" />
+                  )}
+                </div>
+              )}
               <div className="field"><label>Band</label>
                 <select value={detailsDraft.band || ''} onChange={setField('band')}>
                   <option value="">-</option>
@@ -209,7 +225,7 @@ export default function ProfileDetail() {
                 <PolarGrid />
                 <PolarAngleAxis dataKey="axis" fontSize={12} />
                 <PolarRadiusAxis domain={[0, 100]} fontSize={10} />
-                <Radar dataKey="value" stroke="#1e62d0" fill="#1e62d0" fillOpacity={0.35} />
+                <Radar dataKey="value" stroke="#4f46e5" fill="#4f46e5" fillOpacity={0.32} />
               </RadarChart>
             </ResponsiveContainer>
           ) : (
@@ -263,8 +279,6 @@ export default function ProfileDetail() {
           </p>
         )}
       </div>
-
-      {toast && <div className="toast">{toast}</div>}
     </div>
   )
 }

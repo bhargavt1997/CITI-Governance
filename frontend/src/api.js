@@ -58,6 +58,13 @@ export const api = {
   decideTimesheet: (id, approved) =>
     request(`/timesheets/${id}/decision`, { method: 'POST', body: JSON.stringify({ approved }) }),
 
+  // Delivery metrics (GT / Jira)
+  metrics: (params = {}) => {
+    const qs = new URLSearchParams(params).toString()
+    return request(`/metrics${qs ? `?${qs}` : ''}`)
+  },
+  saveMetric: (data) => request('/metrics', { method: 'POST', body: JSON.stringify(data) }),
+
   // Users
   managers: () => request('/users/managers'),
 
@@ -76,6 +83,10 @@ export const ALL_BANDS = ['b8', 'b7', 'b6l', 'b6h', 'b5l', 'b5h', 'b4l', 'b4h']
 export const MANAGER_BANDS = ['b6h', 'b5l', 'b5h', 'b4l', 'b4h']
 export const DEVELOPER_BANDS = ['b8', 'b7', 'b6l']
 export const bandLabel = (b) => (b ? String(b).toUpperCase() : '')
+// Seniority rank by band order (b8 lowest .. b4h highest). Higher = more senior.
+export const bandRank = (b) => ALL_BANDS.indexOf(b)
+// The band alone decides the role: B6H and above manage, B6L and below build.
+export const roleForBand = (b) => (MANAGER_BANDS.includes(b) ? 'Manager' : 'Developer')
 
 export const STAGES = [
   'NOMINATED',

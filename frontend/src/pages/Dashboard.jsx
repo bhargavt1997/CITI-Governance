@@ -51,6 +51,9 @@ function ManagerDashboard() {
   if (error) return <div className="error-banner">Could not load dashboard: {error}. Is the backend running on :8080?</div>
   if (!summary) return <div className="empty">Loading dashboard…</div>
 
+  // A manager with no reportees gets the personal dashboard (delivery, PTS, trainings) instead of empty team charts.
+  if (candidates.length === 0) return <DeveloperDashboard />
+
   const year = new Date().getFullYear()
   const kpis = [
     { label: 'Total Candidates', value: summary.totalCandidates, to: '/onboarding' },

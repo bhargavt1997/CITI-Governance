@@ -54,10 +54,12 @@ export function AuthProvider({ children }) {
   // Senior managers (band b5l/b5h/b4l/b4h) can view the full registered-people directory.
   const SENIOR_BANDS = ['b5l', 'b5h', 'b4l', 'b4h']
   const isSeniorManager = isManager && SENIOR_BANDS.includes(user?.band)
+  // Delivery metrics only apply once a person is actually onboarded and working.
+  const isOnboarded = user?.currentStage === 'ONBOARDED'
   const roleLabel = isSeniorManager ? 'Senior Manager' : isManager ? 'Manager' : 'Developer'
 
   return (
-    <AuthContext.Provider value={{ user, isManager, isSeniorManager, roleLabel, booting, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isManager, isSeniorManager, isOnboarded, roleLabel, booting, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   )

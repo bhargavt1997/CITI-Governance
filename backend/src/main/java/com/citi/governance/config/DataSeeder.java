@@ -38,7 +38,32 @@ public class DataSeeder {
             ensureManagerProfiles(users, candidates);
             // Demo org mappings (run after manager candidate records exist).
             applyDemoOrg(jdbc);
+            // Seed a few months of delivery metrics for onboarded people so the GT Metrics page isn't empty.
+            seedMetrics(jdbc);
         };
+    }
+
+    /** Idempotently seed the last 6 months of delivery metrics for every onboarded person. */
+    private void seedMetrics(JdbcTemplate jdbc) {
+        java.util.List<java.util.Map<String, Object>> rows =
+                jdbc.queryForList("SELECT id FROM candidates WHERE current_stage = 'ONBOARDED'");
+        java.time.LocalDate now = java.time.LocalDate.now();
+        for (java.util.Map<String, Object> r : rows) {
+            long id = ((Number) r.get("id")).longValue();
+            for (int off = 0; off < 6; off++) {
+                String month = now.minusMonths(off).format(MONTH);
+                int commits = 18 + (int) ((id * 13 + off * 5) % 55);
+                int storiesAssigned = 6 + (int) ((id * 3 + off) % 7);
+                int storiesCompleted = Math.max(0, storiesAssigned - (int) ((id + off) % 3));
+                int pointsAssigned = storiesAssigned * 3 + (int) ((id + off) % 5);
+                int pointsCompleted = Math.min(pointsAssigned, storiesCompleted * 3 + (int) (id % 4));
+                jdbc.update(
+                        "INSERT INTO metrics (candidate_id, month, github_commits, stories_assigned, "
+                        + "stories_completed, story_points_assigned, story_points_completed, updated_at) "
+                        + "VALUES (?,?,?,?,?,?,?, now()) ON CONFLICT (candidate_id, month) DO NOTHING",
+                        id, month, commits, storiesAssigned, storiesCompleted, pointsAssigned, pointsCompleted);
+            }
+        }
     }
 
     /** Demo-specific org structure: Jitendr Kumar is a B5H senior manager; Bhargav T reports to him. Idempotent. */

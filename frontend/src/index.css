@@ -315,15 +315,34 @@ select:focus, input:focus, textarea:focus {
 .ts-note.ok { color: var(--green); font-weight: 600; }
 .ts-note.bad { color: var(--red); font-weight: 600; }
 
+/* ================= GT Metrics editor ================= */
+.metric-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px; margin-top: 16px;
+}
+.metric-field { display: flex; flex-direction: column; gap: 6px; }
+.metric-field label { font-size: 11px; font-weight: 600; color: var(--faint); letter-spacing: 0.3px; text-transform: uppercase; }
+.metric-field .num-input { width: 100%; }
+.metric-highlights { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; }
+.metric-highlights label { font-size: 11px; font-weight: 600; color: var(--faint); letter-spacing: 0.3px; text-transform: uppercase; }
+.metric-highlights textarea { width: 100%; resize: vertical; }
+
+/* ================= Notifications (toasts) ================= */
+.toast-stack {
+  position: fixed; top: 26px; right: 26px; z-index: 9999;
+  display: flex; flex-direction: column; gap: 10px; align-items: flex-end;
+  pointer-events: none;
+}
 .toast {
-  position: fixed; bottom: 26px; right: 26px;
+  pointer-events: auto;
+  max-width: min(400px, calc(100vw - 52px));
   background: var(--navy-900); color: #fff;
-  padding: 13px 20px; border-radius: 12px; font-size: 13px; font-weight: 500;
-  box-shadow: var(--shadow-lg); z-index: 50;
+  padding: 13px 20px; border-radius: 12px; font-size: 13px; font-weight: 500; line-height: 1.4;
+  box-shadow: var(--shadow-lg);
   animation: toast-in 0.25s ease;
 }
 @keyframes toast-in {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 

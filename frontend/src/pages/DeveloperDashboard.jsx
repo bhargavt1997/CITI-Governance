@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
 import { api, STAGES, STAGE_LABELS } from '../api'
 import { useAuth } from '../auth'
@@ -9,13 +9,16 @@ import { useAuth } from '../auth'
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const monthShort = (m) => MONTHS[Number(String(m).split('-')[1]) - 1] || m
 const enrollBadge = (s) => (s === 'COMPLETED' ? 'green' : s === 'IN_PROGRESS' ? 'amber' : 'gray')
+const INDIGO = '#4f46e5'
+const GREEN = '#059669'
 
 export default function DeveloperDashboard() {
-  const { user } = useAuth()
+  const { user, isOnboarded } = useAuth()
   const navigate = useNavigate()
   const [c, setC] = useState(null)
   const [enrollments, setEnrollments] = useState([])
   const [timesheets, setTimesheets] = useState([])
+  const [metrics, setMetrics] = useState([])
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -24,8 +27,9 @@ export default function DeveloperDashboard() {
       api.candidate(user.candidateId),
       api.candidateEnrollments(user.candidateId),
       api.timesheets({ candidateId: user.candidateId }),
+      api.metrics({ candidateId: user.candidateId }).catch(() => []),
     ])
-      .then(([cand, enr, ts]) => { setC(cand); setEnrollments(enr); setTimesheets(ts) })
+      .then(([cand, enr, ts, m]) => { setC(cand); setEnrollments(enr); setTimesheets(ts); setMetrics(m) })
       .catch((e) => setError(e.message))
   }, [user.candidateId])
 
@@ -33,12 +37,28 @@ export default function DeveloperDashboard() {
   if (!c) return <div className="empty">Loading your dashboard…</div>
 
   const year = new Date().getFullYear()
+  const month = new Date().toISOString().slice(0, 7)
   const ptsData = MONTHS.map((_, i) => {
     const key = `${year}-${String(i + 1).padStart(2, '0')}`
     const t = timesheets.find((ts) => ts.month === key)
     return { month: key, hours: t ? (t.total ?? 0) : 0 }
   })
   const hoursThisYear = ptsData.reduce((s, d) => s + (d.hours || 0), 0)
+
+  // Delivery metrics, only shown once the person is onboarded and working.
+  const gtData = MONTHS.map((_, i) => {
+    const key = `${year}-${String(i + 1).padStart(2, '0')}`
+    const m = metrics.find((x) => x.month === key)
+    return {
+      month: key,
+      commits: m?.githubCommits ?? 0,
+      storiesAssigned: m?.storiesAssigned ?? 0,
+      storiesCompleted: m?.storiesCompleted ?? 0,
+      pointsAssigned: m?.storyPointsAssigned ?? 0,
+      pointsCompleted: m?.storyPointsCompleted ?? 0,
+    }
+  })
+  const thisMonthMetric = metrics.find((x) => x.month === month)
 
   // Happy-path milestones (KARAT Failed is a detour, not a normal step).
   const JOURNEY = STAGES.filter((s) => s !== 'KARAT_FAILED')
@@ -49,6 +69,7 @@ export default function DeveloperDashboard() {
 
   const kpis = [
     { label: 'Onboarding Step', value: `${curIdx + 1}/${JOURNEY.length}` },
+    ...(isOnboarded ? [{ label: 'GitHub Commits', value: thisMonthMetric?.githubCommits ?? 0, to: '/metrics' }] : []),
     { label: 'Trainings', value: enrollments.length, to: '/training' },
     { label: 'Completed', value: completed, to: '/training' },
     { label: `PTS Hours · ${year}`, value: hoursThisYear, to: '/pts' },
@@ -97,6 +118,38 @@ export default function DeveloperDashboard() {
           </div>
         )}
       </div>
+
+      {isOnboarded && (
+        <div className="grid charts">
+          <div className="card">
+            <h3>GitHub Commits · {year}</h3>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={gtData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#eef0f5" />
+                <XAxis dataKey="month" tickFormatter={monthShort} fontSize={11} />
+                <YAxis fontSize={11} allowDecimals={false} />
+                <Tooltip labelFormatter={monthShort} />
+                <Bar dataKey="commits" name="Commits" fill={INDIGO} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="card">
+            <h3>Stories (Jira) · {year}</h3>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={gtData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#eef0f5" />
+                <XAxis dataKey="month" tickFormatter={monthShort} fontSize={11} />
+                <YAxis fontSize={11} allowDecimals={false} />
+                <Tooltip labelFormatter={monthShort} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="storiesAssigned" name="Assigned" fill={INDIGO} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="storiesCompleted" name="Completed" fill={GREEN} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       <div className="grid charts">
         <div className="card">

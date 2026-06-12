@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { useAuth } from '../auth'
+import { useToast } from '../toast'
 
 const WEEKS = ['week1', 'week2', 'week3', 'week4', 'week5']
 const currentMonth = () => new Date().toISOString().slice(0, 7)
@@ -20,6 +21,7 @@ function StatusBadge({ sheet }) {
 
 export default function Timesheet() {
   const { user, isManager } = useAuth()
+  const toast = useToast()
   const [month, setMonth] = useState(currentMonth())
   const [tab, setTab] = useState('mine')
   const [ownRow, setOwnRow] = useState({})
@@ -27,10 +29,7 @@ export default function Timesheet() {
   const [ownDirty, setOwnDirty] = useState(false)
   const [reports, setReports] = useState([])
   const [reportSheets, setReportSheets] = useState({})
-  const [toast, setToast] = useState(null)
   const [error, setError] = useState(null)
-
-  const notify = (msg, ms = 2500) => { setToast(msg); setTimeout(() => setToast(null), ms) }
 
   const load = async (m) => {
     try {
@@ -74,8 +73,8 @@ export default function Timesheet() {
       setOwnSheet(saved)
       setOwnRow({ ...saved })
       setOwnDirty(false)
-      notify('Timesheet submitted for approval ✓')
-    } catch (e) { notify(`Save failed: ${e.message}`, 4000) }
+      toast.success('Your timesheet was submitted for approval.', { title: 'Timesheet submitted' })
+    } catch (e) { toast.error(e.message, { title: 'Could not save timesheet' }) }
   }
 
   const decide = async (cid, approved) => {
@@ -84,8 +83,9 @@ export default function Timesheet() {
     try {
       const updated = await api.decideTimesheet(sheet.id, approved)
       setReportSheets((s) => ({ ...s, [cid]: updated }))
-      notify(approved ? 'Timesheet approved ✓' : 'Timesheet rejected')
-    } catch (e) { notify(e.message, 4000) }
+      if (approved) toast.success('Timesheet approved.', { title: 'Approved' })
+      else toast.warning('Timesheet rejected.', { title: 'Rejected' })
+    } catch (e) { toast.error(e.message, { title: 'Could not record decision' }) }
   }
 
   const pendingCount = reports.filter((r) => {
@@ -219,8 +219,6 @@ export default function Timesheet() {
       ) : (
         myTimesheet
       )}
-
-      {toast && <div className="toast">{toast}</div>}
     </div>
   )
 }

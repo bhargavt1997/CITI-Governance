@@ -2,15 +2,16 @@ import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { api, STAGES, STAGE_LABELS, bandLabel, soeidVisible } from '../api'
 import { useAuth } from '../auth'
+import { useToast } from '../toast'
 
 const initials = (name) => name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
 
 export default function Onboarding() {
   const { user, isManager, isSeniorManager } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
   const [candidates, setCandidates] = useState([])
   const [error, setError] = useState(null)
-  const [toast, setToast] = useState(null)
   const [dragId, setDragId] = useState(null)
   const [dropStage, setDropStage] = useState(null)
 
@@ -21,18 +22,18 @@ export default function Onboarding() {
     .catch((e) => setError(e.message))
   useEffect(() => { load() }, [])
 
-  const notify = (m, ms = 2500) => { setToast(m); setTimeout(() => setToast(null), ms) }
-
   const moveTo = async (c, stage) => {
     if (!c || stage === c.currentStage) return
+    const prevStage = c.currentStage
     // optimistic update
     setCandidates((cs) => cs.map((x) => (x.id === c.id ? { ...x, currentStage: stage } : x)))
     try {
       await api.setStage(c.id, stage)
-      notify(`${c.name} → ${STAGE_LABELS[stage]} ✓`)
+      toast.success(`${c.name} moved to ${STAGE_LABELS[stage]}.`, { title: 'Stage updated' })
     } catch (e) {
-      notify(e.message, 4000)
-      load() // revert to server truth
+      // roll the card back to where it was and explain why
+      setCandidates((cs) => cs.map((x) => (x.id === c.id ? { ...x, currentStage: prevStage } : x)))
+      toast.error(e.message, { title: `Cannot move to ${STAGE_LABELS[stage]}` })
     }
   }
 
@@ -114,8 +115,6 @@ export default function Onboarding() {
           )
         })}
       </div>
-
-      {toast && <div className="toast">{toast}</div>}
     </div>
   )
 }

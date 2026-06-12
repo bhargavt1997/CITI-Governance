@@ -19,6 +19,9 @@ public final class Bands {
     public static final List<String> SENIOR = List.of("b5l", "b5h", "b4l", "b4h");
     public static final String DEFAULT_MANAGER = "b6h";
 
+    /** Seniority rank by band order (b8 lowest .. b4h highest). Higher = more senior. */
+    public static int rank(String band) { return ALL.indexOf(band); }
+
     public static boolean isManagerBand(String band) { return MANAGER.contains(band); }
     public static boolean isDeveloperBand(String band) { return DEVELOPER.contains(band); }
     public static boolean isSeniorBand(String band) { return SENIOR.contains(band); }

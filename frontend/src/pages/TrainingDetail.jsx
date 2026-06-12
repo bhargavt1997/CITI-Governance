@@ -3,14 +3,15 @@ import { useParams } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../auth'
 import { useCrumbs } from '../crumbs'
+import { useToast } from '../toast'
 
 export default function TrainingDetail() {
   const { user, isManager } = useAuth()
   const { setLabel } = useCrumbs()
+  const toast = useToast()
   const { id } = useParams()
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
-  const [toast, setToast] = useState(null)
   const [editing, setEditing] = useState(null) // enrollment id being edited
   const [draft, setDraft] = useState({})
 
@@ -33,11 +34,9 @@ export default function TrainingDetail() {
     try {
       await api.enroll(t.id, Number(user.candidateId))
       load()
-      setToast('Enrolled ✓')
-      setTimeout(() => setToast(null), 2500)
+      toast.success(`You are enrolled in ${t.title}.`, { title: 'Enrolled' })
     } catch (e) {
-      setToast(e.message)
-      setTimeout(() => setToast(null), 4000)
+      toast.error(e.message, { title: 'Could not enrol' })
     }
   }
 
@@ -51,11 +50,9 @@ export default function TrainingDetail() {
       await api.updateEnrollment(editing, draft)
       setEditing(null)
       load()
-      setToast('Progress updated ✓')
-      setTimeout(() => setToast(null), 2500)
+      toast.success('Training progress updated.', { title: 'Saved' })
     } catch (e) {
-      setToast(e.message)
-      setTimeout(() => setToast(null), 4000)
+      toast.error(e.message, { title: 'Could not update progress' })
     }
   }
 

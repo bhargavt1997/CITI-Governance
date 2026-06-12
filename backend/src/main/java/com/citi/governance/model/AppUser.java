@@ -32,6 +32,10 @@ public class AppUser {
     @Transient
     private String band;
 
+    /** Not persisted - the linked candidate's current onboarding stage (so the client can gate features). */
+    @Transient
+    private String currentStage;
+
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public Long getId() { return id; }
@@ -48,6 +52,8 @@ public class AppUser {
     public void setCandidateId(Long candidateId) { this.candidateId = candidateId; }
     public String getBand() { return band; }
     public void setBand(String band) { this.band = band; }
+    public String getCurrentStage() { return currentStage; }
+    public void setCurrentStage(String currentStage) { this.currentStage = currentStage; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }
