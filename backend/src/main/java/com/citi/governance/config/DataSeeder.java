@@ -39,6 +39,8 @@ public class DataSeeder {
             ensureManagerProfiles(users, candidates);
             // Atul Raj's demo team (managers + developers) - idempotent.
             ensureDemoPeople(candidates, history, users, auth);
+            // Jitendr Kumar's 7-person team - idempotent.
+            ensureJitendrTeam(candidates, history, users, auth);
             // Demo org mappings (run after manager candidate records exist).
             applyDemoOrg(jdbc);
             // Seed the delivery projects (pods) with senior-management leads + CITI owners.
@@ -78,23 +80,29 @@ public class DataSeeder {
     }
 
     /**
-     * Demo-specific org structure. Leadership chain: Bhargav (B5L) -> Jitendr (B5H) ->
-     * Shubhi Gupta (B4H) -> Srini Nagakedar (CEO, B2). Idempotent.
+     * Demo-specific org structure.
+     * Leadership chain: Srini (B2, CEO) -> Shubhi (B4H) -> Jitendr (B5H) -> Bhargav's 7-person team.
+     * Idempotent.
      */
     private void applyDemoOrg(JdbcTemplate jdbc) {
         jdbc.update("UPDATE candidates SET band = 'b5h' "
                 + "WHERE email = 'jitendrkumar@deloitte.com' AND (band IS NULL OR band <> 'b5h')");
-        jdbc.update("UPDATE candidates SET reporting_manager = 'Jitendr Kumar' "
-                + "WHERE email = 'tsbhargav@deloitte.com'");
         // Shubhi Gupta is a B4H leader who manages Jitendr; Srini is the B2 CEO above her.
         jdbc.update("UPDATE candidates SET band = 'b4h' WHERE email = 'shubhigupta7@deloitte.com'");
         jdbc.update("UPDATE candidates SET band = 'b2' WHERE email = 'ssrinagakedar@deloitte.com'");
         jdbc.update("UPDATE candidates SET reporting_manager = 'Shubhi Gupta' WHERE email = 'jitendrkumar@deloitte.com'");
         jdbc.update("UPDATE candidates SET reporting_manager = 'Srini Nagakedar' WHERE email = 'shubhigupta7@deloitte.com'");
-        // The two team managers report under Jitendr (alongside Bhargav) so the org tree reads cleanly:
-        // Srini -> Shubhi -> Jitendr -> {Bhargav, Suresh, Anita} -> developers.
-        jdbc.update("UPDATE candidates SET reporting_manager = 'Jitendr Kumar' "
+        // Suresh and Anita are demo managers that report to Shubhi (not Jitendr).
+        jdbc.update("UPDATE candidates SET reporting_manager = 'Shubhi Gupta' "
                 + "WHERE email IN ('suresh.iyer@deloitte.com','anita.desai@deloitte.com')");
+        // Jitendr Kumar's direct reports: the real 7-person team.
+        jdbc.update("UPDATE candidates SET reporting_manager = 'Jitendr Kumar' "
+                + "WHERE email IN ('tsbhargav@deloitte.com','tbansari@deloitte.com','atawri@deloitte.com',"
+                + "'siaman@deloitte.com','asharjil@deloitte.com','dvitthalgajakosh@deloitte.com','padwivedi@deloitte.com')");
+        // Everyone on Jitendr's team belongs to the RUBY pod.
+        jdbc.update("UPDATE candidates SET pod = 'RUBY' "
+                + "WHERE email IN ('tsbhargav@deloitte.com','tbansari@deloitte.com','atawri@deloitte.com',"
+                + "'siaman@deloitte.com','asharjil@deloitte.com','dvitthalgajakosh@deloitte.com','padwivedi@deloitte.com')");
         // Atul Raj is a B5H senior manager reporting to Shubhi (a second senior-management branch).
         jdbc.update("UPDATE candidates SET band = 'b5h' WHERE email = 'aturaj@deloitte.com'");
         jdbc.update("UPDATE candidates SET reporting_manager = 'Shubhi Gupta' WHERE email = 'aturaj@deloitte.com'");
@@ -255,6 +263,54 @@ public class DataSeeder {
                     }
                 });
             }
+        }
+    }
+
+    /** Idempotently seed Jitendr Kumar's 7-person team. Skips anyone already in the system. */
+    private void ensureJitendrTeam(CandidateRepository candidates, StageHistoryRepository history,
+                                   AppUserRepository users, AuthService auth) {
+        // name, email, band, pod, citiLeadership
+        // All report to Jitendr Kumar and are ONBOARDED.
+        String[][] people = {
+            {"Aman Singhania",             "siaman@deloitte.com",            "b6h", "RUBY", "Gonzalo"},
+            {"Abdullah Sherjil",           "asharjil@deloitte.com",           "b6l", "RUBY", "Gonzalo"},
+            {"Bansari Shukla",             "tbansari@deloitte.com",            "b6h", "RUBY", "Gonzalo"},
+            {"Aditya Tawri",               "atawri@deloitte.com",              "b6h", "RUBY", "Joshua"},
+            {"Dhananjay Vitthalgajakosh",  "dvitthalgajakosh@deloitte.com",    "b6h", "RUBY", "Joshua"},
+            {"Paranjal Dwivedi",           "padwivedi@deloitte.com",           "b6l", "RUBY", "Joshua"},
+        };
+        for (String[] p : people) {
+            if (candidates.findByEmail(p[1]).isPresent() || users.findByEmailIgnoreCase(p[1]).isPresent()) continue;
+            Role role = com.citi.governance.model.Bands.isManagerBand(p[2]) ? Role.MANAGER : Role.DEVELOPER;
+            Candidate c = new Candidate();
+            c.setName(p[0]);
+            c.setEmail(p[1]);
+            c.setBand(p[2]);
+            c.setReportingManager("Jitendr Kumar");
+            c.setPod(p[3]);
+            c.setCitiLeadership(p[4]);
+            c.setRole(role);
+            c.setCurrentStage(OnboardingStage.ONBOARDED);
+            c.setLocation("Hyderabad");
+            c.setWave("Wave 1");
+            c.setJoinDate(LocalDate.now().minusMonths(3).withDayOfMonth(1));
+            c.setSoeid("SO" + (Math.abs(p[1].hashCode()) % 90000 + 10000));
+            Candidate saved = candidates.save(c);
+
+            StageHistory h = new StageHistory();
+            h.setCandidate(saved);
+            h.setStage(OnboardingStage.ONBOARDED);
+            h.setCompletedBy("Jitendr Kumar");
+            h.setNotes("Demo seed");
+            history.save(h);
+
+            AppUser u = new AppUser();
+            u.setName(p[0]);
+            u.setEmail(p[1]);
+            u.setPasswordHash(auth.hash(DEFAULT_PASSWORD));
+            u.setRole(role);
+            u.setCandidateId(saved.getId());
+            users.save(u);
         }
     }
 
