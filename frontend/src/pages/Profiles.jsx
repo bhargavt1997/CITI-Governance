@@ -25,6 +25,10 @@ export default function Profiles() {
 
   const [timesheets, setTimesheets] = useState([])
 
+  // Derive selected period key early — used in a useEffect dependency below
+  const selMonthKey = `${selYear}-${String(selMonth).padStart(2, '0')}`
+  const selMonthLabel = `${MONTH_NAMES[selMonth - 1].slice(0, 3)} ${selYear}`
+
   useEffect(() => {
     api.candidates().then(setCandidates).catch((e) => setError(e.message))
     api.metrics().then(setMetrics).catch(() => setMetrics([]))
@@ -62,10 +66,6 @@ export default function Profiles() {
     }
     return [...years].sort((a, b) => a - b)
   }, [metrics])
-
-  // Selected period as a yyyy-MM key and a display label
-  const selMonthKey = `${selYear}-${String(selMonth).padStart(2, '0')}`
-  const selMonthLabel = `${MONTH_NAMES[selMonth - 1].slice(0, 3)} ${selYear}`
 
   // Timesheets keyed by candidate id for the selected month
   const ptsByCandidate = useMemo(() => {

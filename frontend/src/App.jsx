@@ -21,7 +21,8 @@ const CRUMB_NAMES = {
   pts: 'PTS',
   metrics: 'GT Metrics',
   onboarding: 'Onboarding',
-  profiles: 'My Team',
+  'my-team': 'My Team',
+  profiles: 'Profile',
   training: 'Training',
   karat: 'KARAT Assessment',
   people: 'CITI Org Directory',
@@ -121,7 +122,7 @@ function UserMenu() {
   const goProfile = () => {
     setOpen(false)
     if (user.candidateId) navigate(`/profiles/${slug(user.name)}`)
-    else navigate('/profiles')
+    else navigate('/my-team')
   }
 
   return (
@@ -157,7 +158,7 @@ function Shell() {
           <NavLink to="/" end>Dashboard</NavLink>
           <NavLink to="/pts">PTS</NavLink>
           {isManager && <NavLink to="/onboarding">Onboarding</NavLink>}
-          <NavLink to="/profiles">My Team</NavLink>
+          <NavLink to="/my-team">My Team</NavLink>
           {isOnboarded && <NavLink to="/metrics">GT Metrics</NavLink>}
           <NavLink to="/training">Training</NavLink>
           <NavLink to="/karat">KARAT Assessment</NavLink>
@@ -212,7 +213,7 @@ export default function App() {
         <Route path="/pts" element={<Timesheet />} />
         <Route path="/metrics" element={<Metrics />} />
         <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="/profiles" element={<Profiles />} />
+        <Route path="/my-team" element={<Profiles />} />
         <Route path="/profiles/:id" element={<ProfileDetail />} />
         <Route path="/training" element={<Training />} />
         <Route path="/training/:id" element={<TrainingDetail />} />
