@@ -93,7 +93,7 @@ export default function Profiles() {
     const rows = []
     for (const c of team) {
       const metric = byCandidate[c.id]?.find((m) => m.month === selMonthKey)
-      const pts = ptsByCandidate[c.id]
+      const pts = ptsByCandidate[c.id]?.status === 'APPROVED' ? ptsByCandidate[c.id] : null
       rows.push([
         c.name,
         c.email,
