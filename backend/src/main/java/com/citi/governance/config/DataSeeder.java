@@ -97,10 +97,19 @@ public class DataSeeder {
         // Former Suresh / Anita reportees — reassigned to Atul Raj now that those accounts are removed.
         jdbc.update("UPDATE candidates SET reporting_manager = 'Atul Raj' "
                 + "WHERE reporting_manager IN ('Suresh Iyer','Anita Desai')");
+        // Fix display name for Aditya Tawri (may have registered with first name only).
+        jdbc.update("UPDATE candidates SET name = 'Aditya Tawri' WHERE email = 'atawri@deloitte.com'");
+        jdbc.update("UPDATE app_users    SET name = 'Aditya Tawri' WHERE email = 'atawri@deloitte.com'");
         // Jitendr Kumar's direct reports: the real 7-person team.
         jdbc.update("UPDATE candidates SET reporting_manager = 'Jitendr Kumar' "
                 + "WHERE email IN ('tsbhargav@deloitte.com','tbansari@deloitte.com','atawri@deloitte.com',"
                 + "'siaman@deloitte.com','asharjil@deloitte.com','dvitthalgajakosh@deloitte.com','padwivedi@deloitte.com')");
+        // Anyone else still pointing to Jitendr (e.g. UI-registered users) moves to Atul Raj.
+        jdbc.update("UPDATE candidates SET reporting_manager = 'Atul Raj' "
+                + "WHERE reporting_manager = 'Jitendr Kumar' "
+                + "AND email NOT IN ('tsbhargav@deloitte.com','tbansari@deloitte.com','atawri@deloitte.com',"
+                + "'siaman@deloitte.com','asharjil@deloitte.com','dvitthalgajakosh@deloitte.com','padwivedi@deloitte.com',"
+                + "'jitendrkumar@deloitte.com')");
         // Everyone on Jitendr's team belongs to the RUBY pod.
         jdbc.update("UPDATE candidates SET pod = 'RUBY' "
                 + "WHERE email IN ('tsbhargav@deloitte.com','tbansari@deloitte.com','atawri@deloitte.com',"
