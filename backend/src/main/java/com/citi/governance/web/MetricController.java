@@ -74,6 +74,11 @@ public class MetricController {
         return metrics.save(m);
     }
 
+    @GetMapping("/available-months")
+    public List<String> availableMonths(@RequestParam String managerName) {
+        return metrics.findDistinctMonthsByManagerName(managerName);
+    }
+
     private Integer count(Object o) {
         if (o == null) return 0;
         int v = ((Number) o).intValue();

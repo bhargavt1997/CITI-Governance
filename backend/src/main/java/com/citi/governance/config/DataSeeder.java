@@ -73,6 +73,8 @@ public class DataSeeder {
                         id, month, commits, storiesAssigned, storiesCompleted, pointsAssigned, pointsCompleted);
             }
         }
+        // Backfill: ensure no existing metrics rows have a NULL highlights (empty string is the safe default).
+        jdbc.update("UPDATE metrics SET highlights = '' WHERE highlights IS NULL");
     }
 
     /**
