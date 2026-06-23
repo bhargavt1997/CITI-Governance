@@ -57,6 +57,8 @@ public class DataSeeder {
             syncCitiByPod(pods, jdbc);
             // Seed a few months of delivery metrics for onboarded people so the GT Metrics page isn't empty.
             seedMetrics(jdbc);
+            // Seed APPROVED timesheets for previous months so PTS columns show data in the download.
+            seedTimesheets(jdbc);
         };
     }
 
@@ -83,6 +85,32 @@ public class DataSeeder {
         }
         // Backfill: ensure no existing metrics rows have a NULL highlights (empty string is the safe default).
         jdbc.update("UPDATE metrics SET highlights = '' WHERE highlights IS NULL");
+    }
+
+    /** Idempotently seed the last 6 months of APPROVED timesheets for every onboarded person. */
+    private void seedTimesheets(JdbcTemplate jdbc) {
+        java.util.List<java.util.Map<String, Object>> rows =
+                jdbc.queryForList("SELECT id FROM candidates WHERE current_stage = 'ONBOARDED'");
+        java.time.LocalDate now = java.time.LocalDate.now();
+        // Seed months 1-6 months back (never the current month so only prior months appear)
+        for (java.util.Map<String, Object> r : rows) {
+            long id = ((Number) r.get("id")).longValue();
+            for (int off = 1; off <= 6; off++) {
+                String month = now.minusMonths(off).format(MONTH);
+                // Deterministic but realistic hours: week1-4 in range 36-44, week5 = 0 or partial
+                double w1 = 36 + (id * 3 + off)     % 9;
+                double w2 = 36 + (id * 7 + off * 2) % 9;
+                double w3 = 36 + (id * 5 + off * 3) % 9;
+                double w4 = 36 + (id * 11 + off)    % 9;
+                double w5 = (id + off) % 4 == 0 ? 8.0 : 0.0; // ~25% of months have a partial 5th week
+                double total = w1 + w2 + w3 + w4 + w5;
+                jdbc.update(
+                        "INSERT INTO timesheets (candidate_id, month, week1, week2, week3, week4, week5, total, status) "
+                        + "VALUES (?,?,?,?,?,?,?,?,'APPROVED') "
+                        + "ON CONFLICT (candidate_id, month) DO NOTHING",
+                        id, month, w1, w2, w3, w4, w5, total);
+            }
+        }
     }
 
     /**
