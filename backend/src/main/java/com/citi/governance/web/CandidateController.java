@@ -111,12 +111,13 @@ public class CandidateController {
                 }
 
                 Role role = Bands.isManagerBand(band) ? Role.MANAGER : Role.DEVELOPER;
+                OnboardingStage stage = parseStage(str(row.get("stage")));
                 Candidate c = new Candidate();
                 c.setName(name);
                 c.setEmail(email);
                 c.setBand(band);
                 c.setRole(role);
-                c.setCurrentStage(OnboardingStage.NOMINATED);
+                c.setCurrentStage(stage);
                 // Reporting manager is given by email (unique, typo-proof) and resolved to a real manager.
                 String mgrEmail = strOrNull(row.get("reportingManagerEmail"));
                 if (mgrEmail != null) {
@@ -144,7 +145,7 @@ public class CandidateController {
 
                 StageHistory h = new StageHistory();
                 h.setCandidate(saved);
-                h.setStage(OnboardingStage.NOMINATED);
+                h.setStage(stage);
                 h.setCompletedBy(manager.getName());
                 h.setNotes("Bulk import");
                 history.save(h);
@@ -176,6 +177,30 @@ public class CandidateController {
 
     private static String str(Object o) { return o == null ? "" : o.toString().trim(); }
     private static String strOrNull(Object o) { String s = str(o); return s.isBlank() ? null : s; }
+
+    /** Parse a human-readable or enum-name stage value; defaults to NOMINATED if blank/unknown. */
+    private static OnboardingStage parseStage(String raw) {
+        if (raw == null || raw.isBlank()) return OnboardingStage.NOMINATED;
+        // Try exact enum name first (e.g. "ONBOARDED", "CARAT_INTERVIEW")
+        try { return OnboardingStage.valueOf(raw.trim().toUpperCase().replace(' ', '_')); }
+        catch (IllegalArgumentException ignored) {}
+        // Try human-readable labels (strip spaces/case)
+        String key = raw.trim().toLowerCase().replaceAll("[^a-z]", "");
+        return switch (key) {
+            case "nominated"                            -> OnboardingStage.NOMINATED;
+            case "karatinterview", "caratinterview"     -> OnboardingStage.CARAT_INTERVIEW;
+            case "clientinterview"                      -> OnboardingStage.CLIENT_INTERVIEW;
+            case "finalselection"                       -> OnboardingStage.FINAL_SELECTION;
+            case "onboardinginitiated"                  -> OnboardingStage.ONBOARDING_INITIATED;
+            case "citiclearancereceived"                -> OnboardingStage.CITI_CLEARANCE_RECEIVED;
+            case "vdisetupin", "vdisetu", "vdisetupinprogress" -> OnboardingStage.VDI_SETUP_IN_PROGRESS;
+            case "onboarded"                            -> OnboardingStage.ONBOARDED;
+            case "offboarding"                          -> OnboardingStage.OFFBOARDING;
+            case "offboarded"                           -> OnboardingStage.OFFBOARDED;
+            case "karatfailed", "caratfailed"           -> OnboardingStage.KARAT_FAILED;
+            default                                     -> OnboardingStage.NOMINATED;
+        };
+    }
 
     @PutMapping("/{id}")
     public Candidate update(@PathVariable Long id, @RequestBody Candidate in, HttpServletRequest req) {

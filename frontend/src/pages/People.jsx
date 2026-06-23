@@ -11,10 +11,10 @@ const roleText = (c) => (c.role === 'MANAGER'
   : 'Developer')
 
 // Bulk-import template: industry-standard column layout. Name/Email/Band/Project are required.
-const TEMPLATE_COLS = ['Name', 'Email', 'Band', 'Project', 'Reporting Manager Email', 'CITI Leadership', 'Wave', 'Join Date', 'SOEID']
+const TEMPLATE_COLS = ['Name', 'Email', 'Band', 'Project', 'Reporting Manager Email', 'CITI Leadership', 'Onboarding Status', 'Wave', 'Join Date', 'SOEID']
 const TEMPLATE_EXAMPLES = [
-  ['Asha Verma', 'asha.verma@deloitte.com', 'b6l', 'RUBY', 'tsbhargav@deloitte.com', 'Gonzalo', 'Wave 4', '', ''],
-  ['Rohit Saxena', 'rohit.saxena@deloitte.com', 'b7', 'HY', 'suresh.iyer@deloitte.com', 'Joshua', 'Wave 4', '', ''],
+  ['Asha Verma', 'asha.verma@deloitte.com', 'b6l', 'RUBY', 'tsbhargav@deloitte.com', 'Gonzalo', 'Nominated', 'Wave 4', '', ''],
+  ['Rohit Saxena', 'rohit.saxena@deloitte.com', 'b7', 'HY', 'tsbhargav@deloitte.com', 'Joshua', 'Onboarded', 'Wave 4', '', ''],
 ]
 // Map any reasonable header spelling to the backend field name. The reporting manager is given by
 // EMAIL (unique, typo-proof) and resolved to the manager server-side. Project is stored in pod.
@@ -26,6 +26,7 @@ const FIELD_BY_HEADER = {
   reportingmanageremail: 'reportingManagerEmail', manageremail: 'reportingManagerEmail',
   reportingmanager: 'reportingManagerEmail', manager: 'reportingManagerEmail', reportsto: 'reportingManagerEmail',
   citileadership: 'citiLeadership', citi: 'citiLeadership', citileader: 'citiLeadership',
+  onboardingstatus: 'stage', onboardingstate: 'stage', status: 'stage', stage: 'stage',
   wave: 'wave',
   joindate: 'joinDate', startdate: 'joinDate',
   soeid: 'soeid', citiid: 'soeid',
