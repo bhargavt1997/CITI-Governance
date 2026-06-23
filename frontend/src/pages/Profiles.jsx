@@ -83,7 +83,7 @@ export default function Profiles() {
 
   const downloadReport = () => {
     const cols = [
-      'Name', 'Email', 'Band', 'Reporting Manager',
+      'Name', 'Email', 'Band', 'Reporting Manager', 'Onboarding Status',
       'Year', 'Month',
       'GitHub Commits', 'Stories Assigned', 'Stories Completed',
       'Story Points Assigned', 'Story Points Completed', 'Work Highlights',
@@ -99,6 +99,7 @@ export default function Profiles() {
         c.email,
         c.band ? bandLabel(c.band) : '',
         c.reportingManager || '',
+        STAGE_LABELS[c.currentStage] || c.currentStage || '',
         selYear,
         MONTH_NAMES[selMonth - 1],
         metric?.githubCommits ?? 0,

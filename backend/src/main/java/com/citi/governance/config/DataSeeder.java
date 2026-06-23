@@ -524,11 +524,8 @@ public class DataSeeder {
     private void ensureDemoPeople(CandidateRepository candidates, StageHistoryRepository history,
                                   AppUserRepository users, AuthService auth) {
         // name, email, band, reportingManager, pod(project), citiLeadership, stage
+        // Note: Naveen Rao, Pooja Iyer, Sameer Khan, Lata Menon removed — no longer part of the org.
         String[][] people = {
-            {"Naveen Rao",  "naveen.rao@deloitte.com",  "b6h", "Atul Raj",   "RUBY", "Joshua",  "ONBOARDED"},
-            {"Pooja Iyer",  "pooja.iyer@deloitte.com",  "b6l", "Naveen Rao", "RUBY", "Joshua",  "ONBOARDED"},
-            {"Sameer Khan", "sameer.khan@deloitte.com", "b7",  "Naveen Rao", "RUBY", "Gonzalo", "CARAT_INTERVIEW"},
-            {"Lata Menon",  "lata.menon@deloitte.com",  "b8",  "Atul Raj",   "RUBY", "Gonzalo", "NOMINATED"},
         };
         for (String[] p : people) {
             if (candidates.findByEmail(p[1]).isPresent() || users.findByEmailIgnoreCase(p[1]).isPresent()) continue;
