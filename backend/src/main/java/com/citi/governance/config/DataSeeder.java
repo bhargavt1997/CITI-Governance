@@ -45,6 +45,8 @@ public class DataSeeder {
             ensureJitendrTeam(candidates, history, users, auth);
             // Atul Raj's 5-person team - idempotent.
             ensureAtulTeam(candidates, history, users, auth);
+            // Sub-team reportees for Bhargav, Aditya, Nikita, Safal, Ganga, Abhijeet - idempotent.
+            ensureReporteeTeams(candidates, history, users, auth);
             // Demo org mappings (run after manager candidate records exist).
             applyDemoOrg(jdbc);
             // Seed the delivery projects (pods) with senior-management leads + CITI owners.
@@ -132,6 +134,13 @@ public class DataSeeder {
         jdbc.update("UPDATE candidates SET pod = 'HY' "
                 + "WHERE email IN ('nshah10@deloitte.com','safkulshreshtha@deloitte.com','gangd@deloitte.com',"
                 + "'meghnasingh4@deloitte.com','abhijeemishra@deloitte.com')");
+        // Sub-team reportees: pin reporting manager and pod for all 11 people.
+        jdbc.update("UPDATE candidates SET reporting_manager = 'Bhargav T', pod = 'RUBY' WHERE email IN ('vnair7@deloitte.com','anussharma@deloitte.com')");
+        jdbc.update("UPDATE candidates SET reporting_manager = 'Aditya Tawri', pod = 'RUBY' WHERE email IN ('aashahu@deloitte.com','sahirajpal@deloitte.com')");
+        jdbc.update("UPDATE candidates SET reporting_manager = 'Nikita Shah', pod = 'HY'   WHERE email IN ('rohitjoshi@deloitte.com','amaraghav@deloitte.com')");
+        jdbc.update("UPDATE candidates SET reporting_manager = 'Safal Kulshreshtha', pod = 'HY' WHERE email IN ('subabbar@deloitte.com','usahore@deloitte.com')");
+        jdbc.update("UPDATE candidates SET reporting_manager = 'Ganga', pod = 'HY'        WHERE email = 'jhpatel@deloitte.com'");
+        jdbc.update("UPDATE candidates SET reporting_manager = 'Abhijite Mishra', pod = 'HY' WHERE email IN ('joyjdas@deloitte.com','smriti8@deloitte.com')");
         // Legacy ORION project was renamed to ETL - migrate any rows + drop the old pod (re-seeded as ETL).
         jdbc.update("UPDATE candidates SET pod = 'ETL' WHERE pod = 'ORION'");
         jdbc.update("DELETE FROM pods WHERE name = 'ORION'");
@@ -200,9 +209,22 @@ public class DataSeeder {
         jdbc.update("UPDATE candidates SET role = 'MANAGER' WHERE role = 'LEAD'");
     }
 
-    /** Permanently remove stale demo accounts (Suresh Iyer, Anita Desai) and all their data. Idempotent. */
+    /** Permanently remove all stale demo accounts and all their data. Idempotent. */
     private void removeStaleAccounts(JdbcTemplate jdbc) {
-        String[] emails = {"suresh.iyer@deloitte.com", "anita.desai@deloitte.com"};
+        String[] emails = {
+            "suresh.iyer@deloitte.com", "anita.desai@deloitte.com",
+            "sneha.reddy@deloitte.com", "meera.pillai@deloitte.com",
+            "pooja.iyer@deloitte.com",  "sameer.khan@deloitte.com",
+            "lata.menon@deloitte.com",  "kavya.nair@deloitte.com",
+            "ravi.kumar@deloitte.com",  "naveen.rao@deloitte.com",
+            "aditya.menon@deloitte.com","karthik.rao@deloitte.com",
+            "farhan.khan@deloitte.com", "sonia.pillai@deloitte.com",
+            "priya.sharma@deloitte.com","asha.verma@deloitte.com",
+            "vikram.nair@deloitte.com", "ananya.gupta@deloitte.com",
+            "maya.lead@deloitte.com",   "neha.joshi@deloitte.com",
+            "rahul.verma@deloitte.com", "divya.krishnan@deloitte.com",
+            "rohan.joshi@deloitte.com", "arjun.mehta@deloitte.com",
+        };
         for (String email : emails) {
             jdbc.update("DELETE FROM enrollments WHERE candidate_id IN (SELECT id FROM candidates WHERE email = ?)", email);
             jdbc.update("DELETE FROM timesheets   WHERE candidate_id IN (SELECT id FROM candidates WHERE email = ?)", email);
@@ -436,6 +458,66 @@ public class DataSeeder {
             CitiLeader l = new CitiLeader();
             l.setName(name);
             leaders.save(l);
+        }
+    }
+
+    /**
+     * Sub-team reportees for each manager in Jitendr's and Atul's teams.
+     * Format: name, email, band, reportingManager, pod, citiLeadership — all ONBOARDED.
+     */
+    private void ensureReporteeTeams(CandidateRepository candidates, StageHistoryRepository history,
+                                     AppUserRepository users, AuthService auth) {
+        String[][] people = {
+            // Bhargav T's reportees (RUBY / Gonzalo)
+            {"Vishnu Nair",          "vnair7@deloitte.com",           "b7",  "Bhargav T",          "RUBY", "Gonzalo"},
+            {"Anushka Sharma",       "anussharma@deloitte.com",       "b6l", "Bhargav T",          "RUBY", "Gonzalo"},
+            // Aditya Tawri's reportees (RUBY / Gonzalo)
+            {"Aaryan Sahu",          "aashahu@deloitte.com",          "b6l", "Aditya Tawri",       "RUBY", "Gonzalo"},
+            {"Sahil Rajpal",         "sahirajpal@deloitte.com",       "b6l", "Aditya Tawri",       "RUBY", "Gonzalo"},
+            // Nikita Shah's reportees (HY / Joshua)
+            {"Rohit Joshi",          "rohitjoshi@deloitte.com",       "b6l", "Nikita Shah",        "HY",   "Joshua"},
+            {"Aman Raghav",          "amaraghav@deloitte.com",        "b6l", "Nikita Shah",        "HY",   "Joshua"},
+            // Safal Kulshreshtha's reportees (HY / Joshua)
+            {"Shubhanshu Abbar",     "subabbar@deloitte.com",         "b6l", "Safal Kulshreshtha", "HY",   "Joshua"},
+            {"Ujjawal Sahore",       "usahore@deloitte.com",          "b6l", "Safal Kulshreshtha", "HY",   "Joshua"},
+            // Ganga's reportee (HY / Joshua)
+            {"Jhunu Patel",          "jhpatel@deloitte.com",          "b6h", "Ganga",              "HY",   "Joshua"},
+            // Abhijite Mishra's reportees (HY / Joshua)
+            {"Joyjit Das",           "joyjdas@deloitte.com",          "b7",  "Abhijite Mishra",    "HY",   "Joshua"},
+            {"Smriti",               "smriti8@deloitte.com",          "b6l", "Abhijite Mishra",    "HY",   "Joshua"},
+        };
+        for (String[] p : people) {
+            if (candidates.findByEmail(p[1]).isPresent() || users.findByEmailIgnoreCase(p[1]).isPresent()) continue;
+            Role role = com.citi.governance.model.Bands.isManagerBand(p[2]) ? Role.MANAGER : Role.DEVELOPER;
+            Candidate c = new Candidate();
+            c.setName(p[0]);
+            c.setEmail(p[1]);
+            c.setBand(p[2]);
+            c.setReportingManager(p[3]);
+            c.setPod(p[4]);
+            c.setCitiLeadership(p[5]);
+            c.setRole(role);
+            c.setCurrentStage(OnboardingStage.ONBOARDED);
+            c.setLocation("Hyderabad");
+            c.setWave("Wave 1");
+            c.setJoinDate(LocalDate.now().minusMonths(3).withDayOfMonth(1));
+            c.setSoeid("SO" + (Math.abs(p[1].hashCode()) % 90000 + 10000));
+            Candidate saved = candidates.save(c);
+
+            StageHistory h = new StageHistory();
+            h.setCandidate(saved);
+            h.setStage(OnboardingStage.ONBOARDED);
+            h.setCompletedBy(p[3]);
+            h.setNotes("Demo seed");
+            history.save(h);
+
+            AppUser u = new AppUser();
+            u.setName(p[0]);
+            u.setEmail(p[1]);
+            u.setPasswordHash(auth.hash(DEFAULT_PASSWORD));
+            u.setRole(role);
+            u.setCandidateId(saved.getId());
+            users.save(u);
         }
     }
 
