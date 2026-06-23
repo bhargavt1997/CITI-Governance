@@ -23,10 +23,16 @@ export default function Profiles() {
   const [selYear, setSelYear] = useState(CURRENT_YEAR)
   const [selMonth, setSelMonth] = useState(CURRENT_MONTH)
 
+  const [timesheets, setTimesheets] = useState([])
+
   useEffect(() => {
     api.candidates().then(setCandidates).catch((e) => setError(e.message))
     api.metrics().then(setMetrics).catch(() => setMetrics([]))
   }, [])
+
+  useEffect(() => {
+    api.timesheets({ month: selMonthKey }).then(setTimesheets).catch(() => setTimesheets([]))
+  }, [selMonthKey])
 
   // My Team is open to everyone:
   //  - managers see themselves + their direct reportees
@@ -61,6 +67,16 @@ export default function Profiles() {
   const selMonthKey = `${selYear}-${String(selMonth).padStart(2, '0')}`
   const selMonthLabel = `${MONTH_NAMES[selMonth - 1].slice(0, 3)} ${selYear}`
 
+  // Timesheets keyed by candidate id for the selected month
+  const ptsByCandidate = useMemo(() => {
+    const map = {}
+    for (const t of timesheets) {
+      const cid = t.candidate?.id
+      if (cid != null) map[cid] = t
+    }
+    return map
+  }, [timesheets])
+
   // Commits for a given candidate in the selected period
   const commitsForPeriod = (cid) =>
     byCandidate[cid]?.find((m) => m.month === selMonthKey)?.githubCommits
@@ -71,10 +87,13 @@ export default function Profiles() {
       'Year', 'Month',
       'GitHub Commits', 'Stories Assigned', 'Stories Completed',
       'Story Points Assigned', 'Story Points Completed', 'Work Highlights',
+      'PTS Week 1', 'PTS Week 2', 'PTS Week 3', 'PTS Week 4', 'PTS Week 5',
+      'PTS Total Hours', 'PTS Status',
     ]
     const rows = []
     for (const c of team) {
-      const entry = byCandidate[c.id]?.find((m) => m.month === selMonthKey)
+      const metric = byCandidate[c.id]?.find((m) => m.month === selMonthKey)
+      const pts = ptsByCandidate[c.id]
       rows.push([
         c.name,
         c.email,
@@ -82,12 +101,19 @@ export default function Profiles() {
         c.reportingManager || '',
         selYear,
         MONTH_NAMES[selMonth - 1],
-        entry?.githubCommits ?? 0,
-        entry?.storiesAssigned ?? 0,
-        entry?.storiesCompleted ?? 0,
-        entry?.storyPointsAssigned ?? 0,
-        entry?.storyPointsCompleted ?? 0,
-        entry?.highlights || '',
+        metric?.githubCommits ?? 0,
+        metric?.storiesAssigned ?? 0,
+        metric?.storiesCompleted ?? 0,
+        metric?.storyPointsAssigned ?? 0,
+        metric?.storyPointsCompleted ?? 0,
+        metric?.highlights || '',
+        pts?.week1 ?? '',
+        pts?.week2 ?? '',
+        pts?.week3 ?? '',
+        pts?.week4 ?? '',
+        pts?.week5 ?? '',
+        pts?.total ?? '',
+        pts?.status ?? '',
       ])
     }
     const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
@@ -96,7 +122,7 @@ export default function Profiles() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `team-gt-metrics-${selMonthKey}.csv`
+    a.download = `team-report-${selMonthKey}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
