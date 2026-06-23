@@ -59,6 +59,8 @@ public class DataSeeder {
             seedMetrics(jdbc);
             // Seed APPROVED timesheets for previous months so PTS columns show data in the download.
             seedTimesheets(jdbc);
+            // Seed skill profile scores for onboarded people who haven't filled in their own yet.
+            seedSkillProfiles(jdbc);
         };
     }
 
@@ -110,6 +112,26 @@ public class DataSeeder {
                         + "ON CONFLICT (candidate_id, month) DO NOTHING",
                         id, month, w1, w2, w3, w4, w5, total);
             }
+        }
+    }
+
+    /** Seed skill profile scores for onboarded people who haven't filled in their own yet (all zeros). */
+    private void seedSkillProfiles(JdbcTemplate jdbc) {
+        java.util.List<java.util.Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT id FROM candidates WHERE current_stage = 'ONBOARDED' "
+                + "AND skill_technical = 0 AND skill_functional = 0 AND skill_leadership = 0 "
+                + "AND skill_domain = 0 AND skill_certifications = 0");
+        for (java.util.Map<String, Object> r : rows) {
+            long id = ((Number) r.get("id")).longValue();
+            int technical      = 70 + (int) ((id * 7)  % 21); // 70-90
+            int functional     = 65 + (int) ((id * 11) % 21); // 65-85
+            int leadership     = 60 + (int) ((id * 5)  % 26); // 60-85
+            int domain         = 72 + (int) ((id * 9)  % 19); // 72-90
+            int certifications = 55 + (int) ((id * 13) % 31); // 55-85
+            jdbc.update(
+                    "UPDATE candidates SET skill_technical=?, skill_functional=?, skill_leadership=?, "
+                    + "skill_domain=?, skill_certifications=? WHERE id=?",
+                    technical, functional, leadership, domain, certifications, id);
         }
     }
 
