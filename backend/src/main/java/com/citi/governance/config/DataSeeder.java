@@ -32,6 +32,8 @@ public class DataSeeder {
             if (candidates.count() == 0) {
                 seedGovernanceData(candidates, history, timesheets, trainings, enrollments);
             }
+            // Remove Suresh Iyer and Anita Desai entirely (candidates + logins + all child data).
+            removeStaleAccounts(jdbc);
             // Accounts are ensured idempotently every boot so they survive reseeds and new entries can be added.
             ensureManagerAccounts(users, auth);
             ensureDeveloperAccounts(users, candidates, auth);
@@ -92,9 +94,9 @@ public class DataSeeder {
         jdbc.update("UPDATE candidates SET band = 'b2' WHERE email = 'ssrinagakedar@deloitte.com'");
         jdbc.update("UPDATE candidates SET reporting_manager = 'Shubhi Gupta' WHERE email = 'jitendrkumar@deloitte.com'");
         jdbc.update("UPDATE candidates SET reporting_manager = 'Srini Nagakedar' WHERE email = 'shubhigupta7@deloitte.com'");
-        // Suresh and Anita are demo managers that report to Shubhi (not Jitendr).
-        jdbc.update("UPDATE candidates SET reporting_manager = 'Shubhi Gupta' "
-                + "WHERE email IN ('suresh.iyer@deloitte.com','anita.desai@deloitte.com')");
+        // Former Suresh / Anita reportees — reassigned to Atul Raj now that those accounts are removed.
+        jdbc.update("UPDATE candidates SET reporting_manager = 'Atul Raj' "
+                + "WHERE reporting_manager IN ('Suresh Iyer','Anita Desai')");
         // Jitendr Kumar's direct reports: the real 7-person team.
         jdbc.update("UPDATE candidates SET reporting_manager = 'Jitendr Kumar' "
                 + "WHERE email IN ('tsbhargav@deloitte.com','tbansari@deloitte.com','atawri@deloitte.com',"
@@ -148,8 +150,6 @@ public class DataSeeder {
 
     /** Manager accounts (name, email). All share the default password. */
     private static final String[][] MANAGERS = {
-            {"Suresh Iyer", "suresh.iyer@deloitte.com"},
-            {"Anita Desai", "anita.desai@deloitte.com"},
             {"Bhargav T", "tsbhargav@deloitte.com"},
             {"Jitendr Kumar", "jitendrkumar@deloitte.com"},
             {"Shubhi Gupta", "shubhigupta7@deloitte.com"},
@@ -174,6 +174,20 @@ public class DataSeeder {
         jdbc.execute("ALTER TABLE candidates DROP COLUMN IF EXISTS karat_failed");
         jdbc.update("UPDATE app_users SET role = 'MANAGER' WHERE role = 'LEAD'");
         jdbc.update("UPDATE candidates SET role = 'MANAGER' WHERE role = 'LEAD'");
+    }
+
+    /** Permanently remove stale demo accounts (Suresh Iyer, Anita Desai) and all their data. Idempotent. */
+    private void removeStaleAccounts(JdbcTemplate jdbc) {
+        String[] emails = {"suresh.iyer@deloitte.com", "anita.desai@deloitte.com"};
+        for (String email : emails) {
+            jdbc.update("DELETE FROM enrollments WHERE candidate_id IN (SELECT id FROM candidates WHERE email = ?)", email);
+            jdbc.update("DELETE FROM timesheets   WHERE candidate_id IN (SELECT id FROM candidates WHERE email = ?)", email);
+            jdbc.update("DELETE FROM metrics       WHERE candidate_id IN (SELECT id FROM candidates WHERE email = ?)", email);
+            jdbc.update("DELETE FROM stage_history WHERE candidate_id IN (SELECT id FROM candidates WHERE email = ?)", email);
+            jdbc.update("UPDATE app_users SET candidate_id = NULL WHERE email = ?", email);
+            jdbc.update("DELETE FROM candidates WHERE email = ?", email);
+            jdbc.update("DELETE FROM app_users WHERE email = ?", email);
+        }
     }
 
     /**
@@ -408,14 +422,14 @@ public class DataSeeder {
 
             String[][] people = {
                 // name, email, soeid, band, wave, pod, location, manager, stage, monthsAgoNominated
-                {"Arjun Mehta",    "arjun.mehta@deloitte.com",    "AM93211", "b8",  "Wave 1", "Payments",   "Hyderabad", "Suresh Iyer",  "ONBOARDED",               "5"},
-                {"Priya Sharma",   "priya.sharma@deloitte.com",   "PS84102", "b7",  "Wave 1", "Payments",   "Bengaluru", "Suresh Iyer",  "ONBOARDED",               "5"},
-                {"Rahul Verma",    "rahul.verma@deloitte.com",    "RV77345", "b8",  "Wave 1", "Cards",      "Pune",      "Anita Desai",  "ONBOARDED",               "4"},
-                {"Sneha Reddy",    "sneha.reddy@deloitte.com",    "SR66120", "b7",  "Wave 2", "Cards",      "Hyderabad", "Bhargav T",    "VDI_SETUP_IN_PROGRESS",   "3"},
-                {"Vikram Nair",    "vikram.nair@deloitte.com",    "VN55980", "b6l", "Wave 2", "Risk",       "Chennai",   "Suresh Iyer",  "CITI_CLEARANCE_RECEIVED", "3"},
-                {"Divya Krishnan", "divya.krishnan@deloitte.com", "",        "b7",  "Wave 2", "Risk",       "Bengaluru", "Anita Desai",  "ONBOARDING_INITIATED",    "2"},
-                {"Karthik Rao",    "karthik.rao@deloitte.com",    "",        "b6l", "Wave 3", "Payments",   "Hyderabad", "Suresh Iyer",  "FINAL_SELECTION",         "2"},
-                {"Ananya Gupta",   "ananya.gupta@deloitte.com",   "",        "b6l", "Wave 3", "Cards",      "Mumbai",    "Anita Desai",  "CLIENT_INTERVIEW",        "1"},
+                {"Arjun Mehta",    "arjun.mehta@deloitte.com",    "AM93211", "b8",  "Wave 1", "Payments",   "Hyderabad", "Atul Raj",  "ONBOARDED",               "5"},
+                {"Priya Sharma",   "priya.sharma@deloitte.com",   "PS84102", "b7",  "Wave 1", "Payments",   "Bengaluru", "Atul Raj",  "ONBOARDED",               "5"},
+                {"Rahul Verma",    "rahul.verma@deloitte.com",    "RV77345", "b8",  "Wave 1", "Cards",      "Pune",      "Atul Raj",  "ONBOARDED",               "4"},
+                {"Sneha Reddy",    "sneha.reddy@deloitte.com",    "SR66120", "b7",  "Wave 2", "Cards",      "Hyderabad", "Bhargav T", "VDI_SETUP_IN_PROGRESS",   "3"},
+                {"Vikram Nair",    "vikram.nair@deloitte.com",    "VN55980", "b6l", "Wave 2", "Risk",       "Chennai",   "Atul Raj",  "CITI_CLEARANCE_RECEIVED", "3"},
+                {"Divya Krishnan", "divya.krishnan@deloitte.com", "",        "b7",  "Wave 2", "Risk",       "Bengaluru", "Atul Raj",  "ONBOARDING_INITIATED",    "2"},
+                {"Karthik Rao",    "karthik.rao@deloitte.com",    "",        "b6l", "Wave 3", "Payments",   "Hyderabad", "Atul Raj",  "FINAL_SELECTION",         "2"},
+                {"Ananya Gupta",   "ananya.gupta@deloitte.com",   "",        "b6l", "Wave 3", "Cards",      "Mumbai",    "Atul Raj",  "CLIENT_INTERVIEW",        "1"},
                 {"Rohan Joshi",    "rohan.joshi@deloitte.com",    "",        "b7",  "Wave 3", "Risk",       "Pune",      "Bhargav T",    "KARAT_FAILED",            "1"},
                 {"Meera Pillai",   "meera.pillai@deloitte.com",   "",        "b6l", "Wave 3", "Payments",   "Chennai",   "Bhargav T",    "NOMINATED",               "0"},
             };
@@ -507,7 +521,7 @@ public class DataSeeder {
                 t.setCategory(certs[i][2]);
                 t.setDescription(certs[i][3]);
                 t.setTargetDate(LocalDate.now().plusMonths(2 + i));
-                t.setCreatedBy("Suresh Iyer");
+                t.setCreatedBy("Jitendr Kumar");
                 savedTrainings[i] = trainings.save(t);
             }
 
