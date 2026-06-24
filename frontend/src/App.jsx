@@ -1,21 +1,26 @@
-import { useEffect, useRef, useState } from 'react'
+import { Component, lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { NavLink, Route, Routes, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { api, slug } from './api'
 import { useAuth } from './auth'
 import { useCrumbs } from './crumbs'
-import Login from './pages/Login.jsx'
-import Dashboard from './pages/Dashboard.jsx'
-import Timesheet from './pages/Timesheet.jsx'
-import Onboarding from './pages/Onboarding.jsx'
-import Profiles from './pages/Profiles.jsx'
-import ProfileDetail from './pages/ProfileDetail.jsx'
-import Training from './pages/Training.jsx'
-import TrainingDetail from './pages/TrainingDetail.jsx'
-import KaratAssessment from './pages/KaratAssessment.jsx'
-import People from './pages/People.jsx'
-import Metrics from './pages/Metrics.jsx'
-import Projects from './pages/Projects.jsx'
 
+// ─── Route-level code splitting ────────────────────────────────────────────
+// Each page is a separate JS chunk; loaded only when the user first navigates
+// to that route. Initial bundle contains only the shell + login.
+const Login           = lazy(() => import('./pages/Login.jsx'))
+const Dashboard       = lazy(() => import('./pages/Dashboard.jsx'))
+const Timesheet       = lazy(() => import('./pages/Timesheet.jsx'))
+const Onboarding      = lazy(() => import('./pages/Onboarding.jsx'))
+const Profiles        = lazy(() => import('./pages/Profiles.jsx'))
+const ProfileDetail   = lazy(() => import('./pages/ProfileDetail.jsx'))
+const Training        = lazy(() => import('./pages/Training.jsx'))
+const TrainingDetail  = lazy(() => import('./pages/TrainingDetail.jsx'))
+const KaratAssessment = lazy(() => import('./pages/KaratAssessment.jsx'))
+const People          = lazy(() => import('./pages/People.jsx'))
+const Metrics         = lazy(() => import('./pages/Metrics.jsx'))
+const Projects        = lazy(() => import('./pages/Projects.jsx'))
+
+// ─── Breadcrumb labels ──────────────────────────────────────────────────────
 const CRUMB_NAMES = {
   '': 'Dashboard',
   pts: 'PTS',
@@ -29,7 +34,38 @@ const CRUMB_NAMES = {
   projects: 'Projects & Leadership',
 }
 
-function Breadcrumb() {
+// ─── Page-level spinner ────────────────────────────────────────────────────
+function PageLoader() {
+  return (
+    <div className="page-loader">
+      <div className="page-spinner" />
+    </div>
+  )
+}
+
+// ─── Error boundary for lazy chunks ────────────────────────────────────────
+// ChunkLoadError happens when a new deploy lands mid-session (old chunk URLs
+// 404). Auto-reload once picks up the fresh bundle.
+class PageErrorBoundary extends Component {
+  state = { hasError: false }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  componentDidCatch(err) {
+    if (err?.name === 'ChunkLoadError') window.location.reload()
+  }
+
+  render() {
+    if (this.state.hasError)
+      return <div className="error-banner">This page failed to load. Please refresh.</div>
+    return this.props.children
+  }
+}
+
+// ─── Breadcrumb ────────────────────────────────────────────────────────────
+const Breadcrumb = memo(function Breadcrumb() {
   const { pathname } = useLocation()
   const { labels } = useCrumbs()
   const parts = pathname.split('/').filter(Boolean)
@@ -50,9 +86,10 @@ function Breadcrumb() {
       ))}
     </nav>
   )
-}
+})
 
-function SearchBox() {
+// ─── Search box ────────────────────────────────────────────────────────────
+const SearchBox = memo(function SearchBox() {
   const [q, setQ] = useState('')
   const [results, setResults] = useState([])
   const [open, setOpen] = useState(false)
@@ -72,10 +109,16 @@ function SearchBox() {
   }, [q])
 
   useEffect(() => {
-    const onClick = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', onClick)
-    return () => document.removeEventListener('mousedown', onClick)
+    const close = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
   }, [])
+
+  const handleSelect = useCallback((c) => {
+    setOpen(false)
+    setQ('')
+    navigate(`/profiles/${slug(c.name)}`)
+  }, [navigate])
 
   return (
     <div className="search-box" ref={boxRef}>
@@ -90,11 +133,7 @@ function SearchBox() {
       {open && results.length > 0 && (
         <div className="search-results">
           {results.map((c) => (
-            <div
-              key={c.id}
-              className="search-result"
-              onClick={() => { setOpen(false); setQ(''); navigate(`/profiles/${slug(c.name)}`) }}
-            >
+            <div key={c.id} className="search-result" onClick={() => handleSelect(c)}>
               <strong>{c.name}</strong>
               <span>{c.soeid || 'No SOEID'} · {c.pod || '-'}</span>
             </div>
@@ -103,31 +142,37 @@ function SearchBox() {
       )}
     </div>
   )
-}
+})
 
-function UserMenu() {
+// ─── User menu ────────────────────────────────────────────────────────────
+const UserMenu = memo(function UserMenu() {
   const { user, logout, roleLabel } = useAuth()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   const navigate = useNavigate()
 
   useEffect(() => {
-    const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', onClick)
-    return () => document.removeEventListener('mousedown', onClick)
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
   }, [])
 
   const initials = user.name.split(' ').map((w) => w[0]).join('').slice(0, 2)
 
-  const goProfile = () => {
+  const goProfile = useCallback(() => {
     setOpen(false)
     if (user.candidateId) navigate(`/profiles/${slug(user.name)}`)
     else navigate('/my-team')
-  }
+  }, [navigate, user.candidateId, user.name])
+
+  const handleLogout = useCallback(() => {
+    setOpen(false)
+    logout()
+  }, [logout])
 
   return (
     <div className="user-menu" ref={ref}>
-      <button className="user-chip" onClick={() => setOpen(!open)}>
+      <button className="user-chip" onClick={() => setOpen((v) => !v)}>
         <span className="avatar">{initials}</span>
         <span className="user-name">{user.name}</span>
         <span className="user-role">{roleLabel}</span>
@@ -139,13 +184,14 @@ function UserMenu() {
             <span>{user.email}</span>
           </div>
           <button onClick={goProfile}>👤 My Profile</button>
-          <button onClick={() => { setOpen(false); logout() }}>↪ Logout</button>
+          <button onClick={handleLogout}>↪ Logout</button>
         </div>
       )}
     </div>
   )
-}
+})
 
+// ─── App shell ────────────────────────────────────────────────────────────
 function Shell() {
   const { user, isManager, isSeniorManager, isOnboarded, roleLabel } = useAuth()
   return (
@@ -175,8 +221,13 @@ function Shell() {
           <SearchBox />
           <UserMenu />
         </header>
+        {/* Suspense here keeps sidebar + topbar visible while page chunks load */}
         <main className="content">
-          <Outlet />
+          <PageErrorBoundary>
+            <Suspense fallback={<PageLoader />}>
+              <Outlet />
+            </Suspense>
+          </PageErrorBoundary>
         </main>
       </div>
     </div>
@@ -187,7 +238,6 @@ function Booting() {
   return <div className="boot-screen">Loading…</div>
 }
 
-/** Guards the authenticated app; sends unauthenticated users to /login, remembering where they were. */
 function RequireAuth() {
   const { user, booting } = useAuth()
   const loc = useLocation()
@@ -196,12 +246,15 @@ function RequireAuth() {
   return <Shell />
 }
 
-/** The login screen; once authenticated, everyone lands on the dashboard. */
 function LoginRoute() {
   const { user, booting } = useAuth()
   if (booting) return <Booting />
   if (user) return <Navigate to="/" replace />
-  return <Login />
+  return (
+    <Suspense fallback={<Booting />}>
+      <Login />
+    </Suspense>
+  )
 }
 
 export default function App() {
@@ -209,17 +262,17 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginRoute />} />
       <Route element={<RequireAuth />}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/pts" element={<Timesheet />} />
-        <Route path="/metrics" element={<Metrics />} />
-        <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="/my-team" element={<Profiles />} />
+        <Route path="/"             element={<Dashboard />} />
+        <Route path="/pts"          element={<Timesheet />} />
+        <Route path="/metrics"      element={<Metrics />} />
+        <Route path="/onboarding"   element={<Onboarding />} />
+        <Route path="/my-team"      element={<Profiles />} />
         <Route path="/profiles/:id" element={<ProfileDetail />} />
-        <Route path="/training" element={<Training />} />
+        <Route path="/training"     element={<Training />} />
         <Route path="/training/:id" element={<TrainingDetail />} />
-        <Route path="/karat" element={<KaratAssessment />} />
-        <Route path="/people" element={<People />} />
-        <Route path="/projects" element={<Projects />} />
+        <Route path="/karat"        element={<KaratAssessment />} />
+        <Route path="/people"       element={<People />} />
+        <Route path="/projects"     element={<Projects />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

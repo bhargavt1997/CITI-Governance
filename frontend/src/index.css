@@ -44,6 +44,17 @@ body { margin: 0; background: var(--bg); }
   min-height: 100vh; display: flex; align-items: center; justify-content: center;
   color: var(--muted); font-size: 14px; letter-spacing: 0.3px;
 }
+.page-loader {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 240px;
+}
+.page-spinner {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ================= Sidebar ================= */
 .sidebar {
