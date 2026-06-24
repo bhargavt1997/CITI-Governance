@@ -55,7 +55,7 @@ export default function Timesheet() {
     } catch (e) { setError(e.message) }
   }
 
-  useEffect(() => { load(month) }, [month])
+  useEffect(() => { load(month) }, [month, user.candidateId, user.name, isManager])
 
   const ownTotal = sumWeeks(ownRow)
   const setWeek = (wk, v) => {

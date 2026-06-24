@@ -20,7 +20,7 @@ export default function Onboarding() {
   const load = () => api.candidates()
     .then((cs) => setCandidates(cs.filter((c) => c.reportingManager === user.name)))
     .catch((e) => setError(e.message))
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [user.name])
 
   const moveTo = async (c, stage) => {
     if (!c || stage === c.currentStage) return
